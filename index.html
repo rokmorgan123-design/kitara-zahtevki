@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Rok Morgan — Zahtevki</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121212; --bg2:#1b1b1b; --card:#1f1f1f; --text:#f3efe7; --muted:#a8a29a;
+    --gold:#e0b84c; --gold-dim:#8a713a; --danger:#e05a4c; --ok:#4caf7d;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
+  body{min-height:100vh;display:flex;flex-direction:column;}
+  h1,h2,h3{font-family:'Fraunces',serif;margin:0;}
+  .wrap{max-width:520px;margin:0 auto;width:100%;padding:20px 18px 40px;flex:1;display:flex;flex-direction:column;}
+  header.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:22px 0 8px;}
+  header.top h1{font-size:1.4rem;color:var(--gold);text-align:center;}
+  .subtitle{text-align:center;color:var(--muted);font-size:0.92rem;margin-top:2px;margin-bottom:18px;}
+  .view{display:none;flex-direction:column;gap:14px;animation:fade .25s ease;}
+  .view.active{display:flex;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  .big-btn{background:var(--card);border:1px solid #2c2c2c;border-radius:var(--radius);padding:22px 18px;color:var(--text);font-size:1.05rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:14px;cursor:pointer;}
+  .big-btn .emoji{font-size:1.6rem;}
+  .big-btn:active{background:#262626;}
+  .big-btn small{display:block;color:var(--muted);font-weight:400;font-size:0.82rem;margin-top:3px;}
+
+  input[type=text], input[type=number], textarea{
+    width:100%;background:var(--bg2);border:1px solid #333;border-radius:12px;padding:13px 14px;color:var(--text);font-size:1rem;font-family:inherit;
+  }
+  input::placeholder, textarea::placeholder{color:#7a756c;}
+  label{font-size:0.85rem;color:var(--muted);margin-bottom:6px;display:block;}
+  .field{margin-bottom:2px;}
+
+  .search-box{position:sticky;top:0;background:var(--bg);padding-bottom:10px;z-index:5;}
+  .song-cat{color:var(--gold);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 6px;font-weight:700;}
+  .song-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .song-item:active{background:#262626;}
+  .song-item .title{font-weight:600;}
+  .song-item .artist{color:var(--muted);font-size:0.85rem;}
+  .song-item .arrow{color:var(--gold);font-size:1.2rem;}
+  .empty-msg{color:var(--muted);text-align:center;padding:30px 0;font-size:0.9rem;}
+
+  .back{color:var(--muted);background:none;border:none;font-size:0.9rem;padding:6px 0;text-align:left;cursor:pointer;width:fit-content;}
+  .selected-song{background:linear-gradient(135deg,#242018,#1c1c1c);border:1px solid var(--gold-dim);border-radius:var(--radius);padding:16px;}
+  .selected-song .cat{color:var(--gold);font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;}
+  .selected-song .t{font-family:'Fraunces',serif;font-size:1.25rem;margin-top:2px;}
+  .selected-song .a{color:var(--muted);}
+
+  .amount-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .amount-btn{background:var(--bg2);border:1px solid #333;border-radius:12px;padding:14px 8px;text-align:center;color:var(--text);font-weight:600;cursor:pointer;font-size:1rem;}
+  .amount-btn.selected{background:var(--gold);color:#1a1608;border-color:var(--gold);}
+  .amount-btn.wide{grid-column:span 3;}
+
+  .submit-btn{background:var(--gold);color:#1a1608;border:none;border-radius:14px;padding:16px;font-size:1.05rem;font-weight:700;cursor:pointer;margin-top:6px;}
+  .submit-btn:disabled{opacity:0.45;}
+  .submit-btn.secondary{background:var(--card);color:var(--text);border:1px solid #333;}
+
+  .confirm-box{text-align:center;padding:30px 10px;}
+  .confirm-box .big-emoji{font-size:3rem;margin-bottom:8px;}
+  .confirm-box h2{color:var(--gold);margin-bottom:6px;}
+  .confirm-box p{color:var(--muted);margin:4px 0 22px;}
+  .revolut-btn{display:inline-block;background:#000AFF;color:#fff;border-radius:14px;padding:16px 22px;font-weight:700;text-decoration:none;font-size:1rem;}
+  .hint{color:var(--muted);font-size:0.8rem;margin-top:10px;}
+  .footer-note{text-align:center;color:#5c5850;font-size:0.75rem;margin-top:auto;padding-top:24px;}
+  .error-msg{color:var(--danger);font-size:0.85rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><h1>🎸 Rok Morgan</h1></header>
+  <div class="subtitle">Izberi komad ali predlagaj svojega</div>
+
+  <!-- HOME -->
+  <div class="view active" id="view-home">
+    <button class="big-btn" onclick="goList()">
+      <span class="emoji">🎵</span>
+      <span>Izberi komad<small>Poglej seznam in pošlji zahtevek</small></span>
+    </button>
+    <button class="big-btn" onclick="goWishlist()">
+      <span class="emoji">💌</span>
+      <span>Predlagaj komad<small>Ki ga nimam (še) v repertoarju</small></span>
+    </button>
+  </div>
+
+  <!-- SONG LIST -->
+  <div class="view" id="view-list">
+    <button class="back" onclick="goHome()">← Nazaj</button>
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Išči po naslovu ali izvajalcu…" oninput="renderSongs()">
+    </div>
+    <div id="song-results"></div>
+  </div>
+
+  <!-- REQUEST FORM -->
+  <div class="view" id="view-request">
+    <button class="back" onclick="goList()">← Nazaj na seznam</button>
+    <div class="selected-song">
+      <div class="cat" id="req-cat"></div>
+      <div class="t" id="req-title"></div>
+      <div class="a" id="req-artist"></div>
+    </div>
+
+    <div class="field">
+      <label>Napitnina</label>
+      <div class="amount-grid">
+        <div class="amount-btn" data-amt="0" onclick="pickAmount(0)">Brez plačila</div>
+        <div class="amount-btn" data-amt="2" onclick="pickAmount(2)">2 €</div>
+        <div class="amount-btn" data-amt="5" onclick="pickAmount(5)">5 €</div>
+        <div class="amount-btn" data-amt="10" onclick="pickAmount(10)">10 €</div>
+        <div class="amount-btn" data-amt="20" onclick="pickAmount(20)">20 €</div>
+        <div class="amount-btn" data-amt="custom" onclick="pickAmount('custom')">Poljubno</div>
+      </div>
+    </div>
+    <div class="field" id="custom-amount-wrap" style="display:none;">
+      <label>Vnesi znesek (€)</label>
+      <input type="number" id="custom-amount" min="0" step="0.5" placeholder="npr. 7.5">
+    </div>
+
+    <div class="field">
+      <label>Tvoje ime *</label>
+      <input type="text" id="guest-name" placeholder="npr. Ana">
+    </div>
+    <div class="field">
+      <label>Sporočilo (neobvezno)</label>
+      <textarea id="guest-message" rows="2" placeholder="npr. za Ano za rojstni dan 🎂"></textarea>
+    </div>
+    <div class="error-msg" id="req-error"></div>
+    <button class="submit-btn" onclick="submitRequest()">Pošlji zahtevek</button>
+  </div>
+
+  <!-- CONFIRM (request) -->
+  <div class="view" id="view-confirm">
+    <div class="confirm-box">
+      <div class="big-emoji">🎸</div>
+      <h2>Zahtevek poslan!</h2>
+      <p>Rok ga bo kmalu potrdil.</p>
+      <div id="revolut-area"></div>
+    </div>
+    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek</button>
+  </div>
+
+  <!-- WISHLIST FORM -->
+  <div class="view" id="view-wishlist">
+    <button class="back" onclick="goHome()">← Nazaj</button>
+    <h3 style="color:var(--gold);margin-bottom:2px;">Glasbena želja</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-top:0;">Predlagaj komad izven mojega repertoarja — če ga poznam, ga morda odigram še danes, sicer se ga naučim za naslednjič 🙂</p>
+    <div class="field">
+      <label>Izvajalec *</label>
+      <input type="text" id="wl-artist" placeholder="npr. Zdravko Čolić">
+    </div>
+    <div class="field">
+      <label>Naslov pesmi *</label>
+      <input type="text" id="wl-title" placeholder="npr. Ti si mi u krvi">
+    </div>
+    <div class="field">
+      <label>Tvoje ime (neobvezno)</label>
+      <input type="text" id="wl-name" placeholder="npr. Ana">
+    </div>
+    <div class="field">
+      <label>Sporočilo (neobvezno)</label>
+      <textarea id="wl-message" rows="2" placeholder="npr. moja poročna pesem"></textarea>
+    </div>
+    <div class="error-msg" id="wl-error"></div>
+    <button class="submit-btn" onclick="submitWishlist()">Pošlji željo</button>
+  </div>
+
+  <!-- CONFIRM (wishlist) -->
+  <div class="view" id="view-wishlist-confirm">
+    <div class="confirm-box">
+      <div class="big-emoji">💌</div>
+      <h2>Želja poslana!</h2>
+      <p>Hvala za predlog — Rok jo bo pogledal.</p>
+    </div>
+    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek</button>
+  </div>
+
+  <div class="footer-note">made with 🎶 for live nights</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============ NASTAVITVE ============
+const SUPABASE_URL = "https://jrmsisnycnqbeahkxyly.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ifjKIvKIlMXRxB2uRN9DwA_GJI7ARZb";
+const REVOLUT_LINK = "https://revolut.me/TVOJEUPORABNISKOIME"; // TODO: Rok — zamenjaj s svojim pravim revolut.me linkom
+// =====================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let ALL_SONGS = [];
+let selectedSong = null;
+let selectedAmount = null;
+let lastSubmitAt = 0;
+
+function norm(s){
+  return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+}
+
+async function loadSongs(){
+  const { data, error } = await sb.from("songs").select("*").eq("is_active", true).order("position", { ascending: true });
+  if (error) { console.error(error); return; }
+  ALL_SONGS = data || [];
+  renderSongs();
+}
+
+function goHome(){ show("view-home"); }
+function goList(){ show("view-list"); document.getElementById("search").value=""; renderSongs(); }
+function goWishlist(){ show("view-wishlist"); }
+
+function show(id){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+
+function renderSongs(){
+  const q = norm(document.getElementById("search").value);
+  const box = document.getElementById("song-results");
+  const filtered = ALL_SONGS.filter(s => !q || norm(s.title).includes(q) || norm(s.artist).includes(q));
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty-msg">Ni najdenih komadov — poskusi drug iskalni niz.</div>';
+    return;
+  }
+  let html = "";
+  let lastCat = null;
+  filtered.forEach(s=>{
+    if (s.category !== lastCat){
+      html += `<div class="song-cat">${escapeHtml(s.category)}</div>`;
+      lastCat = s.category;
+    }
+    html += `<div class="song-item" onclick="selectSong(${s.id})">
+      <div><div class="title">${escapeHtml(s.title)}</div><div class="artist">${escapeHtml(s.artist)}</div></div>
+      <div class="arrow">›</div>
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+
+function selectSong(id){
+  selectedSong = ALL_SONGS.find(s=>s.id===id);
+  if (!selectedSong) return;
+  document.getElementById("req-cat").textContent = selectedSong.category;
+  document.getElementById("req-title").textContent = selectedSong.title;
+  document.getElementById("req-artist").textContent = selectedSong.artist;
+  selectedAmount = null;
+  document.querySelectorAll(".amount-btn").forEach(b=>b.classList.remove("selected"));
+  document.getElementById("custom-amount-wrap").style.display = "none";
+  document.getElementById("guest-name").value = "";
+  document.getElementById("guest-message").value = "";
+  document.getElementById("req-error").textContent = "";
+  show("view-request");
+}
+
+function pickAmount(v){
+  selectedAmount = v;
+  document.querySelectorAll(".amount-btn").forEach(b=>{
+    b.classList.toggle("selected", String(b.dataset.amt)===String(v));
+  });
+  document.getElementById("custom-amount-wrap").style.display = (v==="custom") ? "block" : "none";
+}
+
+function getFinalAmount(){
+  if (selectedAmount===null) return null;
+  if (selectedAmount==="custom"){
+    const v = parseFloat(document.getElementById("custom-amount").value);
+    if (isNaN(v) || v<0) return null;
+    return v;
+  }
+  return Number(selectedAmount);
+}
+
+async function submitRequest(){
+  const err = document.getElementById("req-error");
+  err.textContent = "";
+  const name = document.getElementById("guest-name").value.trim();
+  const message = document.getElementById("guest-message").value.trim();
+  const amount = getFinalAmount();
+
+  if (!name){ err.textContent = "Prosim, vnesi svoje ime."; return; }
+  if (selectedAmount===null){ err.textContent = "Izberi znesek napitnine (ali \"Brez plačila\")."; return; }
+  if (amount===null){ err.textContent = "Vnesi veljaven znesek."; return; }
+  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov zahtevek."; return; }
+
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = "Pošiljam…";
+
+  const { error } = await sb.from("requests").insert({
+    song_id: selectedSong.id,
+    guest_name: name,
+    amount: amount,
+    message: message || null
+  });
+
+  btn.disabled = false; btn.textContent = "Pošlji zahtevek";
+
+  if (error){ err.textContent = "Prišlo je do napake, poskusi znova."; console.error(error); return; }
+
+  lastSubmitAt = Date.now();
+  const revArea = document.getElementById("revolut-area");
+  if (amount > 0){
+    revArea.innerHTML = `
+      <a class="revolut-btn" target="_blank" rel="noopener" href="${REVOLUT_LINK}">💳 Nakaži ${amount.toFixed(2)} € prek Revolut</a>
+      <div class="hint">Odpre se Revolut — vnesi znesek ${amount.toFixed(2)} €, če ni že izpolnjen.</div>`;
+  } else {
+    revArea.innerHTML = "";
+  }
+  show("view-confirm");
+}
+
+async function submitWishlist(){
+  const err = document.getElementById("wl-error");
+  err.textContent = "";
+  const artist = document.getElementById("wl-artist").value.trim();
+  const title = document.getElementById("wl-title").value.trim();
+  const name = document.getElementById("wl-name").value.trim();
+  const message = document.getElementById("wl-message").value.trim();
+
+  if (!artist || !title){ err.textContent = "Vnesi vsaj izvajalca in naslov pesmi."; return; }
+  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov predlog."; return; }
+
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = "Pošiljam…";
+
+  const { error } = await sb.from("wishlist_requests").insert({
+    artist, title, guest_name: name || null, message: message || null
+  });
+
+  btn.disabled = false; btn.textContent = "Pošlji željo";
+
+  if (error){ err.textContent = "Prišlo je do napake, poskusi znova."; console.error(error); return; }
+
+  lastSubmitAt = Date.now();
+  document.getElementById("wl-artist").value = "";
+  document.getElementById("wl-title").value = "";
+  document.getElementById("wl-name").value = "";
+  document.getElementById("wl-message").value = "";
+  show("view-wishlist-confirm");
+}
+
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+loadSongs();
+</script>
+</body>
+</html>

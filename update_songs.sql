@@ -1,0 +1,110 @@
+-- ============================================
+-- Posodobitev seznama komadov na pravo, kategorizirano
+-- setlisto (ROK MORGAN'S SETLIST.docx) — 86 komadov
+-- ============================================
+
+drop table if exists songs cascade;
+
+create table songs (
+  id serial primary key,
+  position int not null,
+  category text not null,   -- Angleške | Slovenske | Italijanske | Španske | Ex-Yu
+  artist text not null,
+  title text not null,
+  is_active boolean not null default true
+);
+
+insert into songs (position, category, artist, title) values
+(1,'Angleške','Bill Withers','Lean On Me'),
+(2,'Angleške','Tom Jones','Sex Bomb'),
+(3,'Angleške','Jeff Buckley','Hallelujah'),
+(4,'Angleške','Gloria Gaynor','I Will Survive'),
+(5,'Angleške','Duffy','Mercy'),
+(6,'Angleške','Tina Turner','Proud Mary'),
+(7,'Angleške','Shaggy','Angel'),
+(8,'Angleške','Queen','Crazy Little Thing Called Love'),
+(9,'Angleške','Elvis Presley','Jailhouse Rock'),
+(10,'Angleške','Tina Turner','Simply The Best'),
+(11,'Angleške','Ed Sheeran','Perfect'),
+(12,'Angleške','Joan Jett','I Love Rock''n''Roll'),
+(13,'Angleške','The Rolling Stones','Sympathy For The Devil'),
+(14,'Angleške','Robbie Williams','Angel'),
+(15,'Angleške','AC/DC','Shook Me All Night Long'),
+(16,'Angleške','Amy Winehouse','Valerie'),
+(17,'Angleške','The Clash','Should I Stay Or Should I Go'),
+(18,'Angleške','Ray Charles','Hit The Road Jack'),
+(19,'Slovenske','Zmelkoow','BIT'),
+(20,'Slovenske','Slavko Ivančič','Črta'),
+(21,'Slovenske','Hamo in Bučar','Dolgo Nisva Pila'),
+(22,'Slovenske','Zmelkoow','Gravitacija'),
+(23,'Slovenske','Slavko Ivančič','Ti Znaš'),
+(24,'Slovenske','Jan Plestenjak','Ob Tebi Bom Ostal'),
+(25,'Slovenske','Slavko Ivančič','Ko Mene Več Ne Bo'),
+(26,'Slovenske','Faraoni','Kar Je Res Je Res'),
+(27,'Italijanske','Ricchi e Poveri','Sara Perche Ti Amo'),
+(28,'Španske','Los Lobos','La Bamba'),
+(29,'Ex-Yu','Toše Proeski','Moja'),
+(30,'Ex-Yu','Toše Proeski','Ledena'),
+(31,'Ex-Yu','Toše Proeski','Čija Si'),
+(32,'Ex-Yu','Bajaga','Muzika Na Struju'),
+(33,'Ex-Yu','Bajaga','Moji Drugovi'),
+(34,'Ex-Yu','Bajaga','Godine Prolaze'),
+(35,'Ex-Yu','Bajaga','Gore Dole'),
+(36,'Ex-Yu','Bajaga','Lepa Janja'),
+(37,'Ex-Yu','Bajaga','Tekila Gerila'),
+(38,'Ex-Yu','Bajaga','Tišina'),
+(39,'Ex-Yu','Bajaga','Verujem Ne Verujem'),
+(40,'Ex-Yu','Danijela Martinović','Ide Mi U Životu'),
+(41,'Ex-Yu','Parni Valjak','Lutka Za Bal'),
+(42,'Ex-Yu','Parni Valjak','Ljubavna'),
+(43,'Ex-Yu','Parni Valjak','Sve Još Miriše Na Nju'),
+(44,'Ex-Yu','Parni Valjak','Nedelja'),
+(45,'Ex-Yu','Parni Valjak','Jesen V Meni'),
+(46,'Ex-Yu','Parni Valjak','Dok Je Tebe'),
+(47,'Ex-Yu','Parni Valjak','Uhvati Ritam'),
+(48,'Ex-Yu','Parni Valjak','Zastave'),
+(49,'Ex-Yu','Oliver Dragojević','Vjeruj U Ljubav'),
+(50,'Ex-Yu','Oliver Dragojević','Cesarica'),
+(51,'Ex-Yu','Oliver Dragojević','Ako Voliš Me'),
+(52,'Ex-Yu','Oliver Dragojević','Bez Tebe'),
+(53,'Ex-Yu','Oliver Dragojević','Ca Ce Mi Copacabana'),
+(54,'Ex-Yu','Oliver Dragojević','Dva Put Sam Umra'),
+(55,'Ex-Yu','Oliver Dragojević','Nije Htjela'),
+(56,'Ex-Yu','Oliver Dragojević','U Ljubav Vjere Nemam'),
+(57,'Ex-Yu','S.A.R.S.','Lutka'),
+(58,'Ex-Yu','S.A.R.S.','Klinka'),
+(59,'Ex-Yu','Petar Grašo','Ako Te Pitaju'),
+(60,'Ex-Yu','Petar Grašo','Volim I Postojim'),
+(61,'Ex-Yu','Petar Grašo','Ko Nam Brani'),
+(62,'Ex-Yu','Prljavo Kazalište','Kiše Jesenje'),
+(63,'Ex-Yu','Prljavo Kazalište','Ne Zovi Mama Doktora'),
+(64,'Ex-Yu','Prljavo Kazalište','Ruža Hrvatska'),
+(65,'Ex-Yu','Dalmatino','Diteljina S Četiri Lista'),
+(66,'Ex-Yu','Plavi Orkestar','Ako Su To Samo Bile Laži'),
+(67,'Ex-Yu','Plavi Orkestar','Bolje Biti Pijan Nego Star'),
+(68,'Ex-Yu','Plavi Orkestar','Kad Ti Ljubav Ime Prozove'),
+(69,'Ex-Yu','Plavi Orkestar','Od Rođendana Do Rođendana'),
+(70,'Ex-Yu','Plavi Orkestar','Odlazim'),
+(71,'Ex-Yu','Bijelo Dugme','Hajdemo U Planine'),
+(72,'Ex-Yu','Bijelo Dugme','Đurđevdan'),
+(73,'Ex-Yu','Boris Novković','Tamara'),
+(74,'Ex-Yu','Crvena Jabuka','To Mi Radi'),
+(75,'Ex-Yu','Dino Merlin','Kad Si Rekla Da Me Voliš'),
+(76,'Ex-Yu','Gibonni','Činim Pravo Stvar'),
+(77,'Ex-Yu','Gibonni','Libar'),
+(78,'Ex-Yu','Leteči Odred','Sanjao Sa Moju Ružicu'),
+(79,'Ex-Yu','Novi Fosili','Za Dobra Stara Vremena'),
+(80,'Ex-Yu','Riblja Čorba','Kad Sam Bio Mlad'),
+(81,'Ex-Yu','Riblja Čorba','Zelena Trava Doma Mog'),
+(82,'Ex-Yu','Tony Cetinski','Blagom Onom Ko Te Ima'),
+(83,'Ex-Yu','Vinko Coce','Ribari'),
+(84,'Ex-Yu','Zabranjeno Pušenje','Možeš Imat Moje Tjelo'),
+(85,'Ex-Yu','Psihomodo Pop','Frida'),
+(86,'Ex-Yu','Tajči','Hajde Da Ludujemo');
+
+alter table songs enable row level security;
+create policy "public read songs" on songs for select using (true);
+
+-- Znova poveži requests.song_id na novo tabelo songs
+alter table requests add constraint requests_song_id_fkey
+  foreign key (song_id) references songs(id);
