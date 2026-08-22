@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Rok Morgan — Zahtevki</title>
+<title>Rok Morgan — Zahtevki / Requests</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#121212">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -80,32 +80,32 @@
 <body>
 <div class="wrap">
   <header class="top"><h1>🎸 Rok Morgan</h1></header>
-  <div class="subtitle">Izberi komad ali predlagaj svojega</div>
+  <div class="subtitle">Izberi komad ali predlagaj svojega<br>Choose a song or suggest your own</div>
 
   <!-- HOME -->
   <div class="view active" id="view-home">
     <button class="big-btn" onclick="goList()">
       <span class="emoji">🎵</span>
-      <span>Izberi komad<small>Poglej seznam in pošlji zahtevek</small></span>
+      <span>Izberi komad / Song Request<small>Poglej seznam in pošlji zahtevek · Browse the list and send a request</small></span>
     </button>
     <button class="big-btn" onclick="goWishlist()">
       <span class="emoji">💌</span>
-      <span>Predlagaj komad<small>Ki ga nimam (še) v repertoarju</small></span>
+      <span>Predlagaj komad / Suggest a Song<small>Ki ga nimam (še) v repertoarju · Not in my repertoire (yet)</small></span>
     </button>
   </div>
 
   <!-- SONG LIST -->
   <div class="view" id="view-list">
-    <button class="back" onclick="goHome()">← Nazaj</button>
+    <button class="back" onclick="goHome()">← Nazaj / Back</button>
     <div class="search-box">
-      <input type="text" id="search" placeholder="Išči po naslovu ali izvajalcu…" oninput="renderSongs()">
+      <input type="text" id="search" placeholder="Išči po naslovu ali izvajalcu… / Search title or artist…" oninput="renderSongs()">
     </div>
     <div id="song-results"></div>
   </div>
 
   <!-- REQUEST FORM -->
   <div class="view" id="view-request">
-    <button class="back" onclick="goList()">← Nazaj na seznam</button>
+    <button class="back" onclick="goList()">← Nazaj na seznam / Back to list</button>
     <div class="selected-song">
       <div class="cat" id="req-cat"></div>
       <div class="t" id="req-title"></div>
@@ -113,77 +113,77 @@
     </div>
 
     <div class="field">
-      <label>Napitnina</label>
+      <label>Napitnina / Tip</label>
       <div class="amount-grid">
-        <div class="amount-btn" data-amt="0" onclick="pickAmount(0)">Brez plačila</div>
+        <div class="amount-btn" data-amt="0" onclick="pickAmount(0)">Brez plačila<br>No tip</div>
         <div class="amount-btn" data-amt="2" onclick="pickAmount(2)">2 €</div>
         <div class="amount-btn" data-amt="5" onclick="pickAmount(5)">5 €</div>
         <div class="amount-btn" data-amt="10" onclick="pickAmount(10)">10 €</div>
         <div class="amount-btn" data-amt="20" onclick="pickAmount(20)">20 €</div>
-        <div class="amount-btn" data-amt="custom" onclick="pickAmount('custom')">Poljubno</div>
+        <div class="amount-btn" data-amt="custom" onclick="pickAmount('custom')">Poljubno<br>Custom</div>
       </div>
     </div>
     <div class="field" id="custom-amount-wrap" style="display:none;">
-      <label>Vnesi znesek (€)</label>
+      <label>Vnesi znesek (€) / Enter amount (€)</label>
       <input type="number" id="custom-amount" min="0" step="0.5" placeholder="npr. 7.5">
     </div>
 
     <div class="field">
-      <label>Tvoje ime *</label>
-      <input type="text" id="guest-name" placeholder="npr. Ana">
+      <label>Tvoje ime / Your name *</label>
+      <input type="text" id="guest-name" placeholder="npr. / e.g. Ana">
     </div>
     <div class="field">
-      <label>Sporočilo (neobvezno)</label>
-      <textarea id="guest-message" rows="2" placeholder="npr. za Ano za rojstni dan 🎂"></textarea>
+      <label>Sporočilo / Message (optional)</label>
+      <textarea id="guest-message" rows="2" placeholder="npr. / e.g. za Ano za rojstni dan 🎂"></textarea>
     </div>
     <div class="error-msg" id="req-error"></div>
-    <button class="submit-btn" onclick="submitRequest()">Pošlji zahtevek</button>
+    <button class="submit-btn" onclick="submitRequest()">Pošlji zahtevek / Send Request</button>
   </div>
 
   <!-- CONFIRM (request) -->
   <div class="view" id="view-confirm">
     <div class="confirm-box">
       <div class="big-emoji">🎸</div>
-      <h2>Zahtevek poslan!</h2>
-      <p>Rok ga bo kmalu potrdil.</p>
+      <h2>Zahtevek poslan! / Request sent!</h2>
+      <p>Rok ga bo kmalu potrdil. · Rok will confirm it shortly.</p>
       <div id="revolut-area"></div>
     </div>
-    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek</button>
+    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek / Back to start</button>
   </div>
 
   <!-- WISHLIST FORM -->
   <div class="view" id="view-wishlist">
-    <button class="back" onclick="goHome()">← Nazaj</button>
-    <h3 style="color:var(--gold);margin-bottom:2px;">Glasbena želja</h3>
-    <p style="color:var(--muted);font-size:0.88rem;margin-top:0;">Predlagaj komad izven mojega repertoarja — če ga poznam, ga morda odigram še danes, sicer se ga naučim za naslednjič 🙂</p>
+    <button class="back" onclick="goHome()">← Nazaj / Back</button>
+    <h3 style="color:var(--gold);margin-bottom:2px;">Glasbena želja / Song Suggestion</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-top:0;">Predlagaj komad izven mojega repertoarja — če ga poznam, ga morda odigram še danes, sicer se ga naučim za naslednjič 🙂<br><span style="font-size:0.92em;">Suggest a song outside my repertoire — if I know it, I might play it tonight; if not, I'll learn it for next time 🙂</span></p>
     <div class="field">
-      <label>Izvajalec *</label>
-      <input type="text" id="wl-artist" placeholder="npr. Zdravko Čolić">
+      <label>Izvajalec / Artist *</label>
+      <input type="text" id="wl-artist" placeholder="npr. / e.g. Zdravko Čolić">
     </div>
     <div class="field">
-      <label>Naslov pesmi *</label>
-      <input type="text" id="wl-title" placeholder="npr. Ti si mi u krvi">
+      <label>Naslov pesmi / Song Title *</label>
+      <input type="text" id="wl-title" placeholder="npr. / e.g. Ti si mi u krvi">
     </div>
     <div class="field">
-      <label>Tvoje ime (neobvezno)</label>
-      <input type="text" id="wl-name" placeholder="npr. Ana">
+      <label>Tvoje ime / Your name (optional)</label>
+      <input type="text" id="wl-name" placeholder="npr. / e.g. Ana">
     </div>
     <div class="field">
-      <label>Sporočilo (neobvezno)</label>
-      <textarea id="wl-message" rows="2" placeholder="npr. moja poročna pesem"></textarea>
+      <label>Sporočilo / Message (optional)</label>
+      <textarea id="wl-message" rows="2" placeholder="npr. / e.g. moja poročna pesem"></textarea>
     </div>
     <div class="error-msg" id="wl-error"></div>
-    <button class="submit-btn" onclick="submitWishlist()">Pošlji željo</button>
+    <button class="submit-btn" onclick="submitWishlist()">Pošlji željo / Send Suggestion</button>
   </div>
 
   <!-- CONFIRM (wishlist) -->
   <div class="view" id="view-wishlist-confirm">
     <div class="confirm-box">
       <div class="big-emoji">💌</div>
-      <h2>Želja poslana!</h2>
-      <p>Hvala za predlog — Rok jo bo pogledal.</p>
+      <h2>Želja poslana! / Suggestion sent!</h2>
+      <p>Hvala za predlog — Rok jo bo pogledal. · Thanks — Rok will take a look.</p>
     </div>
-    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek</button>
+    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek / Back to start</button>
   </div>
 
   <div class="footer-note">made with 🎶 for live nights</div>
@@ -198,6 +198,14 @@ const REVOLUT_LINK = "https://revolut.me/rokxok7j";
 // =====================================
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CATEGORY_LABELS = {
+  "Angleške": "Angleške / English",
+  "Slovenske": "Slovenske / Slovenian",
+  "Italijanske": "Italijanske / Italian",
+  "Španske": "Španske / Spanish",
+  "Ex-Yu": "Ex-Yu"
+};
 
 let ALL_SONGS = [];
 let selectedSong = null;
@@ -230,14 +238,14 @@ function renderSongs(){
   const box = document.getElementById("song-results");
   const filtered = ALL_SONGS.filter(s => !q || norm(s.title).includes(q) || norm(s.artist).includes(q));
   if (!filtered.length){
-    box.innerHTML = '<div class="empty-msg">Ni najdenih komadov — poskusi drug iskalni niz.</div>';
+    box.innerHTML = '<div class="empty-msg">Ni najdenih komadov — poskusi drug iskalni niz.<br>No songs found — try a different search.</div>';
     return;
   }
   let html = "";
   let lastCat = null;
   filtered.forEach(s=>{
     if (s.category !== lastCat){
-      html += `<div class="song-cat">${escapeHtml(s.category)}</div>`;
+      html += `<div class="song-cat">${escapeHtml(CATEGORY_LABELS[s.category] || s.category)}</div>`;
       lastCat = s.category;
     }
     html += `<div class="song-item" onclick="selectSong(${s.id})">
@@ -251,7 +259,7 @@ function renderSongs(){
 function selectSong(id){
   selectedSong = ALL_SONGS.find(s=>s.id===id);
   if (!selectedSong) return;
-  document.getElementById("req-cat").textContent = selectedSong.category;
+  document.getElementById("req-cat").textContent = CATEGORY_LABELS[selectedSong.category] || selectedSong.category;
   document.getElementById("req-title").textContent = selectedSong.title;
   document.getElementById("req-artist").textContent = selectedSong.artist;
   selectedAmount = null;
@@ -288,13 +296,13 @@ async function submitRequest(){
   const message = document.getElementById("guest-message").value.trim();
   const amount = getFinalAmount();
 
-  if (!name){ err.textContent = "Prosim, vnesi svoje ime."; return; }
-  if (selectedAmount===null){ err.textContent = "Izberi znesek napitnine (ali \"Brez plačila\")."; return; }
-  if (amount===null){ err.textContent = "Vnesi veljaven znesek."; return; }
-  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov zahtevek."; return; }
+  if (!name){ err.textContent = "Prosim, vnesi svoje ime. / Please enter your name."; return; }
+  if (selectedAmount===null){ err.textContent = "Izberi znesek (ali \"Brez plačila\"). / Choose an amount (or \"No tip\")."; return; }
+  if (amount===null){ err.textContent = "Vnesi veljaven znesek. / Enter a valid amount."; return; }
+  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov zahtevek. / Please wait before sending another request."; return; }
 
   const btn = event.target;
-  btn.disabled = true; btn.textContent = "Pošiljam…";
+  btn.disabled = true; btn.textContent = "Pošiljam… / Sending…";
 
   const { error } = await sb.from("requests").insert({
     song_id: selectedSong.id,
@@ -303,16 +311,16 @@ async function submitRequest(){
     message: message || null
   });
 
-  btn.disabled = false; btn.textContent = "Pošlji zahtevek";
+  btn.disabled = false; btn.textContent = "Pošlji zahtevek / Send Request";
 
-  if (error){ err.textContent = "Prišlo je do napake, poskusi znova."; console.error(error); return; }
+  if (error){ err.textContent = "Prišlo je do napake, poskusi znova. / Something went wrong, try again."; console.error(error); return; }
 
   lastSubmitAt = Date.now();
   const revArea = document.getElementById("revolut-area");
   if (amount > 0){
     revArea.innerHTML = `
-      <a class="revolut-btn" target="_blank" rel="noopener" href="${REVOLUT_LINK}">💳 Nakaži ${amount.toFixed(2)} € prek Revolut</a>
-      <div class="hint">Odpre se Revolut — vnesi znesek ${amount.toFixed(2)} €, če ni že izpolnjen.</div>`;
+      <a class="revolut-btn" target="_blank" rel="noopener" href="${REVOLUT_LINK}">💳 Nakaži ${amount.toFixed(2)} € / Pay €${amount.toFixed(2)} via Revolut</a>
+      <div class="hint">Odpre se Revolut — vnesi znesek ${amount.toFixed(2)} €, če ni že izpolnjen.<br>Opens Revolut — enter €${amount.toFixed(2)} if not already filled in.</div>`;
   } else {
     revArea.innerHTML = "";
   }
@@ -327,19 +335,19 @@ async function submitWishlist(){
   const name = document.getElementById("wl-name").value.trim();
   const message = document.getElementById("wl-message").value.trim();
 
-  if (!artist || !title){ err.textContent = "Vnesi vsaj izvajalca in naslov pesmi."; return; }
-  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov predlog."; return; }
+  if (!artist || !title){ err.textContent = "Vnesi vsaj izvajalca in naslov pesmi. / Enter at least artist and song title."; return; }
+  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov predlog. / Please wait before sending another suggestion."; return; }
 
   const btn = event.target;
-  btn.disabled = true; btn.textContent = "Pošiljam…";
+  btn.disabled = true; btn.textContent = "Pošiljam… / Sending…";
 
   const { error } = await sb.from("wishlist_requests").insert({
     artist, title, guest_name: name || null, message: message || null
   });
 
-  btn.disabled = false; btn.textContent = "Pošlji željo";
+  btn.disabled = false; btn.textContent = "Pošlji željo / Send Suggestion";
 
-  if (error){ err.textContent = "Prišlo je do napake, poskusi znova."; console.error(error); return; }
+  if (error){ err.textContent = "Prišlo je do napake, poskusi znova. / Something went wrong, try again."; console.error(error); return; }
 
   lastSubmitAt = Date.now();
   document.getElementById("wl-artist").value = "";
