@@ -75,6 +75,18 @@
   .hint{color:var(--muted);font-size:0.8rem;margin-top:10px;}
   .footer-note{text-align:center;color:#5c5850;font-size:0.75rem;margin-top:auto;padding-top:24px;}
   .error-msg{color:var(--danger);font-size:0.85rem;}
+
+  .contact-card{text-align:center;padding:8px;}
+  .contact-card .name{font-family:'Fraunces',serif;font-size:1.6rem;color:var(--gold);}
+  .contact-card .role{color:var(--muted);margin-top:2px;margin-bottom:22px;}
+  .contact-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:15px 16px;margin-bottom:10px;text-decoration:none;color:var(--text);}
+  .contact-row .ic{font-size:1.3rem;}
+  .contact-row .lbl{font-size:0.75rem;color:var(--muted);}
+  .contact-row .val{font-weight:600;}
+
+  .ig-footer{margin-top:26px;padding-top:22px;border-top:1px solid #262626;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .ig-footer img{width:96px;height:96px;border-radius:10px;border:4px solid #f3efe7;}
+  .ig-footer .ig-text{color:var(--muted);font-size:0.82rem;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -92,6 +104,38 @@
       <span class="emoji">💌</span>
       <span>Predlagaj komad / Suggest a Song<small>Ki ga nimam (še) v repertoarju · Not in my repertoire (yet)</small></span>
     </button>
+    <button class="big-btn" onclick="goVizitka()">
+      <span class="emoji">🪪</span>
+      <span>Vizitka / Business Card<small>Kontaktni podatki · Contact info</small></span>
+    </button>
+
+    <div class="ig-footer">
+      <a href="https://www.instagram.com/rokmorgan/" target="_blank" rel="noopener">
+        <img src="data:image/png;base64,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" alt="Instagram — rokmorgan">
+      </a>
+      <div class="ig-text">Sledi mi in me podpri na Instagramu<br>Follow and support me on Instagram</div>
+    </div>
+  </div>
+
+  <!-- VIZITKA -->
+  <div class="view" id="view-vizitka">
+    <button class="back" onclick="goHome()">← Nazaj / Back</button>
+    <div class="contact-card">
+      <div class="name">Rok Morgan</div>
+      <div class="role">Glasbenik · Musician</div>
+      <a class="contact-row" href="tel:+38640298344">
+        <span class="ic">📞</span>
+        <span><span class="lbl">Telefon / Phone</span><br><span class="val">040 298 344</span></span>
+      </a>
+      <a class="contact-row" href="mailto:rok.morgan@gmail.com">
+        <span class="ic">✉️</span>
+        <span><span class="lbl">E-pošta / Email</span><br><span class="val">rok.morgan@gmail.com</span></span>
+      </a>
+      <a class="contact-row" href="https://www.instagram.com/rokmorgan/" target="_blank" rel="noopener">
+        <span class="ic">📸</span>
+        <span><span class="lbl">Instagram</span><br><span class="val">@rokmorgan</span></span>
+      </a>
+    </div>
   </div>
 
   <!-- SONG LIST -->
@@ -226,6 +270,7 @@ async function loadSongs(){
 function goHome(){ show("view-home"); }
 function goList(){ show("view-list"); document.getElementById("search").value=""; renderSongs(); }
 function goWishlist(){ show("view-wishlist"); }
+function goVizitka(){ show("view-vizitka"); }
 
 function show(id){
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
