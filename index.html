@@ -73,13 +73,15 @@
   .confirm-box p{color:var(--muted);margin:4px 0 22px;}
   .revolut-btn{display:inline-block;background:#000AFF;color:#fff;border-radius:14px;padding:16px 22px;font-weight:700;text-decoration:none;font-size:1rem;}
   .hint{color:var(--muted);font-size:0.8rem;margin-top:10px;}
+  .tipbox-btn{display:block;background:var(--gold);color:#1a1608;border-radius:14px;padding:16px 22px;font-weight:700;font-size:1rem;margin-top:14px;text-align:center;cursor:pointer;}
+  .tipbox-btn.acked{background:var(--card);color:var(--gold);border:1px solid var(--gold);cursor:default;}
   .footer-note{text-align:center;color:#5c5850;font-size:0.75rem;margin-top:auto;padding-top:24px;}
   .error-msg{color:var(--danger);font-size:0.85rem;}
 
   .contact-card{text-align:center;padding:8px;}
   .contact-card .name{font-family:'Fraunces',serif;font-size:1.6rem;color:var(--gold);}
   .contact-card .role{color:var(--muted);margin-top:2px;margin-bottom:22px;}
-  .contact-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:15px 16px;margin-bottom:10px;text-decoration:none;color:var(--text);}
+  .contact-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:15px 16px;margin-bottom:10px;text-decoration:none;color:var(--text);text-align:left;}
   .contact-row .ic{font-size:1.3rem;}
   .contact-row .lbl{font-size:0.75rem;color:var(--muted);}
   .contact-row .val{font-weight:600;}
@@ -196,9 +198,10 @@
   <div class="view" id="view-confirm">
     <div class="confirm-box">
       <div class="big-emoji">🎸</div>
-      <h2>Zahtevek poslan! / Request sent!</h2>
-      <p>Rok ga bo kmalu potrdil. · Rok will confirm it shortly.</p>
+      <h2>Zahtevek poslan!<br>Request sent!</h2>
+      <p>Rok ga bo kmalu potrdil.<br>Rok will confirm it shortly.</p>
       <div id="revolut-area"></div>
+      <div class="tipbox-btn" id="tipbox-btn" onclick="ackTipBox(this)">💰 Prinesem fizično v skrinjico<br>I'll drop it in the tip box</div>
     </div>
     <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek / Back to start</button>
   </div>
@@ -279,6 +282,12 @@ function goHome(){ show("view-home"); }
 function goList(){ show("view-list"); document.getElementById("search").value=""; renderSongs(); }
 function goWishlist(){ show("view-wishlist"); }
 function goVizitka(){ show("view-vizitka"); }
+
+function ackTipBox(el){
+  el.innerHTML = "✓ Hvala!<br>✓ Thanks!";
+  el.classList.add("acked");
+  el.onclick = null;
+}
 
 function show(id){
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
