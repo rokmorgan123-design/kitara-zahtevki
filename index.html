@@ -289,6 +289,14 @@ function ackTipBox(el){
   el.onclick = null;
 }
 
+function resetTipBox(){
+  const el = document.getElementById("tipbox-btn");
+  if (!el) return;
+  el.innerHTML = "💰 Prinesem fizično v skrinjico<br>I'll drop it in the tip box";
+  el.classList.remove("acked");
+  el.onclick = function(){ ackTipBox(el); };
+}
+
 function show(id){
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   document.getElementById(id).classList.add("active");
@@ -386,6 +394,7 @@ async function submitRequest(){
   } else {
     revArea.innerHTML = "";
   }
+  resetTipBox();
   show("view-confirm");
 }
 
