@@ -395,6 +395,7 @@ async function submitRequest(){
     revArea.innerHTML = "";
   }
   resetTipBox();
+  document.getElementById("tipbox-btn").style.display = (amount > 0) ? "block" : "none";
   show("view-confirm");
 }
 
