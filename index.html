@@ -266,6 +266,12 @@ let ALL_SONGS = [];
 let selectedSong = null;
 let selectedAmount = null;
 let lastSubmitAt = 0;
+let CURRENT_EVENT = null;
+
+async function loadCurrentEvent(){
+  const { data } = await sb.from("app_settings").select("current_event").eq("id", true).single();
+  CURRENT_EVENT = data ? data.current_event : null;
+}
 
 function norm(s){
   return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
@@ -378,7 +384,8 @@ async function submitRequest(){
     song_id: selectedSong.id,
     guest_name: name,
     amount: amount,
-    message: message || null
+    message: message || null,
+    event_name: CURRENT_EVENT
   });
 
   btn.disabled = false; btn.textContent = "Pošlji zahtevek / Send Request";
@@ -414,7 +421,7 @@ async function submitWishlist(){
   btn.disabled = true; btn.textContent = "Pošiljam… / Sending…";
 
   const { error } = await sb.from("wishlist_requests").insert({
-    artist, title, guest_name: name || null, message: message || null
+    artist, title, guest_name: name || null, message: message || null, event_name: CURRENT_EVENT
   });
 
   btn.disabled = false; btn.textContent = "Pošlji željo / Send Suggestion";
@@ -434,6 +441,7 @@ function escapeHtml(s){
 }
 
 loadSongs();
+loadCurrentEvent();
 </script>
 </body>
 </html>
