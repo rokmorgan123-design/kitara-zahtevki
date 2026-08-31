@@ -71,6 +71,9 @@
   .status-accepted, .status-playing_today{background:#213a2c;color:var(--ok);}
   .status-rejected, .status-declined{background:#3a2323;color:var(--danger);}
   .status-next_time{background:#2a2a1c;color:var(--gold);}
+  .status-played{background:#1c2a3a;color:#6ab0e0;}
+  .btn-play{background:var(--gold);color:#1a1608;}
+  .played-count{color:var(--muted);font-size:0.82rem;margin:-4px 0 10px;}
 
   .empty-msg{color:var(--muted);text-align:center;padding:30px 0;font-size:0.9rem;}
   .section-label{color:var(--muted);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:22px 0 8px;font-weight:700;}
@@ -113,6 +116,7 @@
   <div class="panel active" id="panel-req">
     <div id="req-pending"></div>
     <div class="section-label">Zgodovina nocojšnjega nastopa</div>
+    <div class="played-count" id="played-count"></div>
     <div id="req-history"></div>
   </div>
 
@@ -295,6 +299,10 @@ function renderRequests(justArrived){
     }).join("");
   }
 
+  const playedCountBox = document.getElementById("played-count");
+  const playedCount = history.filter(r=>r.status==="accepted" && r.played_at).length;
+  playedCountBox.textContent = playedCount ? `🎵 Odigranih nocoj: ${playedCount}` : "";
+
   const histBox = document.getElementById("req-history");
   if (!history.length){
     histBox.innerHTML = '<div class="empty-msg">Še ni zgodovine.</div>';
@@ -302,6 +310,10 @@ function renderRequests(justArrived){
     histBox.innerHTML = history.map(r=>{
       const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
       const amt = Number(r.amount)>0 ? `<div class="amount">${Number(r.amount).toFixed(2)} €</div>` : `<div class="amount free">brez plačila</div>`;
+      const isPlayed = r.status==="accepted" && r.played_at;
+      const showPlayBtn = r.status==="accepted" && !r.played_at;
+      const pillClass = r.status!=="accepted" ? "status-rejected" : (isPlayed ? "status-played" : "status-accepted");
+      const pillLabel = r.status!=="accepted" ? "Zavrnjeno" : (isPlayed ? "🎵 Odigrano" : "Sprejeto");
       return `<div class="card">
         <div class="row1">
           <div><div class="song">${escapeHtml(song.title)}</div><div class="artist">${escapeHtml(song.artist)}</div></div>
@@ -309,7 +321,8 @@ function renderRequests(justArrived){
         </div>
         <div class="guest">👤 ${escapeHtml(r.guest_name)}</div>
         <div class="time">${fmtTime(r.created_at)}</div>
-        <span class="status-pill status-${r.status}">${r.status==='accepted'?'Sprejeto':'Zavrnjeno'}</span>
+        <span class="status-pill ${pillClass}">${pillLabel}</span>
+        ${showPlayBtn ? `<div class="actions"><button class="btn-play" onclick="markPlayed('${r.id}')">▶ Odigrano</button></div>` : ``}
       </div>`;
     }).join("");
   }
@@ -319,6 +332,13 @@ async function setRequestStatus(id, status){
   requests = requests.map(r => r.id===id ? {...r, status} : r);
   renderRequests(false);
   await sb.from("requests").update({ status }).eq("id", id);
+}
+
+async function markPlayed(id){
+  const now = new Date().toISOString();
+  requests = requests.map(r => r.id===id ? {...r, played_at: now} : r);
+  renderRequests(false);
+  await sb.from("requests").update({ played_at: now }).eq("id", id);
 }
 
 // ---------- Render: Wishlist ----------
