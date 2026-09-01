@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pesmarica — Rok Morgan</title>
+<meta name="theme-color" content="#121212">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --bg:#121212; --bg2:#1b1b1b; --text:#f3efe7; --muted:#a8a29a; --gold:#e0b84c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;height:100%;}
+  body{display:flex;flex-direction:column;height:100vh;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg2);border-bottom:1px solid #2a2a2a;}
+  header a.back{color:var(--gold);text-decoration:none;font-weight:700;font-size:0.95rem;white-space:nowrap;}
+  .pagebox{display:flex;align-items:center;gap:8px;}
+  .pagebox button{background:var(--bg);color:var(--gold);border:1px solid var(--gold);border-radius:8px;width:38px;height:38px;font-size:1.1rem;font-weight:700;cursor:pointer;}
+  .pagebox button:disabled{opacity:0.35;cursor:default;}
+  #pageLabel{color:var(--muted);font-size:0.85rem;min-width:64px;text-align:center;}
+  main{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:10px;-webkit-overflow-scrolling:touch;}
+  #canvasWrap{position:relative;max-width:100%;}
+  canvas{display:block;max-width:100%;height:auto;background:#fff;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,0.4);}
+  #status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.9rem;}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="nadzorna.html">← Nazaj</a>
+  <div class="pagebox">
+    <button id="prevBtn" aria-label="Prejšnja stran">◀</button>
+    <span id="pageLabel">— / —</span>
+    <button id="nextBtn" aria-label="Naslednja stran">▶</button>
+  </div>
+</header>
+<main>
+  <div id="canvasWrap">
+    <div id="status">Nalagam …</div>
+    <canvas id="pdfCanvas"></canvas>
+  </div>
+</main>
+
+<script src="pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js";
+
+const params = new URLSearchParams(window.location.search);
+let pageNum = Math.max(1, parseInt(params.get("page"), 10) || 1);
+let pdfDoc = null;
+const canvas = document.getElementById("pdfCanvas");
+const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const pageLabel = document.getElementById("pageLabel");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+
+function updateUrl(){
+  const url = new URL(window.location.href);
+  url.searchParams.set("page", pageNum);
+  window.history.replaceState({}, "", url);
+}
+
+async function renderPage(n){
+  statusEl.style.display = "flex";
+  statusEl.textContent = "Nalagam …";
+  const page = await pdfDoc.getPage(n);
+  const containerWidth = document.getElementById("canvasWrap").parentElement.clientWidth - 20;
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.min(2.2, Math.max(1, containerWidth / base.width));
+  const viewport = page.getViewport({ scale: scale * (window.devicePixelRatio || 1) });
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = (viewport.width / (window.devicePixelRatio || 1)) + "px";
+  canvas.style.height = (viewport.height / (window.devicePixelRatio || 1)) + "px";
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  statusEl.style.display = "none";
+  pageLabel.textContent = n + " / " + pdfDoc.numPages;
+  prevBtn.disabled = n <= 1;
+  nextBtn.disabled = n >= pdfDoc.numPages;
+  updateUrl();
+}
+
+async function init(){
+  try{
+    pdfDoc = await pdfjsLib.getDocument("pesmarica.pdf").promise;
+    pageNum = Math.min(pageNum, pdfDoc.numPages);
+    await renderPage(pageNum);
+  }catch(e){
+    statusEl.textContent = "Napaka pri nalaganju PDF-ja.";
+    console.error(e);
+  }
+}
+
+prevBtn.addEventListener("click", () => { if (pageNum > 1){ pageNum--; renderPage(pageNum); } });
+nextBtn.addEventListener("click", () => { if (pdfDoc && pageNum < pdfDoc.numPages){ pageNum++; renderPage(pageNum); } });
+window.addEventListener("resize", () => { if (pdfDoc) renderPage(pageNum); });
+
+init();
+</script>
+</body>
+</html>
