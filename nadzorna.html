@@ -89,6 +89,17 @@
   .rej-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:12px 14px;margin-bottom:8px;opacity:0.75;}
   .rej-item .song{font-weight:600;font-size:0.95rem;}
   .rej-item .artist{color:var(--muted);font-size:0.82rem;}
+
+  .search-box{position:sticky;top:0;background:var(--bg);padding-bottom:10px;z-index:5;}
+  .search-box input{width:100%;background:var(--bg2);border:1px solid #333;border-radius:12px;padding:13px 14px;color:var(--text);font-size:1rem;font-family:inherit;}
+  .song-cat{color:var(--gold);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 6px;font-weight:700;}
+  .song-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:13px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .song-item .title{font-weight:600;}
+  .song-item .artist{color:var(--muted);font-size:0.85rem;}
+  .song-badge{display:inline-block;font-size:0.68rem;font-weight:700;border-radius:8px;padding:3px 8px;white-space:nowrap;}
+  .badge-queued{background:#2a2a1c;color:var(--gold);}
+  .badge-played{background:#1c2a3a;color:#6ab0e0;}
+  .add-btn{background:var(--gold);color:#1a1608;border:none;border-radius:10px;padding:9px 14px;font-weight:700;font-size:0.85rem;cursor:pointer;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -122,6 +133,7 @@
   <div class="tabs">
     <div class="tab active" id="tab-req" onclick="switchTab('req')">Zahtevki <span class="badge" id="badge-req" style="display:none;">0</span></div>
     <div class="tab" id="tab-wish" onclick="switchTab('wish')">Želje <span class="badge" id="badge-wish" style="display:none;">0</span></div>
+    <div class="tab" id="tab-set" onclick="switchTab('set')">Setlista</div>
   </div>
 
   <!-- ZAHTEVKI -->
@@ -144,6 +156,14 @@
     <div class="section-label">Zgodovina</div>
     <div id="wish-history"></div>
   </div>
+
+  <!-- SETLISTA -->
+  <div class="panel" id="panel-set">
+    <div class="search-box">
+      <input type="text" id="set-search" placeholder="Išči po naslovu ali izvajalcu… " oninput="renderSetlist()">
+    </div>
+    <div id="set-results"></div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -156,9 +176,22 @@ const ADMIN_PIN = "1234"; // TODO: Rok — zamenjaj s svojim PIN-om
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let songsMap = {};
+let ALL_SONGS = [];
 let requests = [];       // all loaded requests
 let wishlist = [];       // all loaded wishlist requests
 let CURRENT_EVENT = null;
+
+const CATEGORY_LABELS = {
+  "Angleške": "Angleške / English",
+  "Slovenske": "Slovenske / Slovenian",
+  "Italijanske": "Italijanske / Italian",
+  "Španske": "Španske / Spanish",
+  "Ex-Yu": "Ex-Yu"
+};
+
+function norm(s){
+  return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+}
 
 // ---------- PIN gate ----------
 function checkPin(){
@@ -183,8 +216,11 @@ if (localStorage.getItem("admin_authed_kitara") === "yes"){ enterDashboard(); }
 function switchTab(t){
   document.getElementById("tab-req").classList.toggle("active", t==="req");
   document.getElementById("tab-wish").classList.toggle("active", t==="wish");
+  document.getElementById("tab-set").classList.toggle("active", t==="set");
   document.getElementById("panel-req").classList.toggle("active", t==="req");
   document.getElementById("panel-wish").classList.toggle("active", t==="wish");
+  document.getElementById("panel-set").classList.toggle("active", t==="set");
+  if (t==="set") renderSetlist();
 }
 
 // ---------- Sound + vibration ----------
@@ -241,8 +277,9 @@ document.getElementById("event-input") && document.getElementById("event-input")
 async function init(){
   await loadEvent();
 
-  const { data: songs } = await sb.from("songs").select("id, artist, title");
-  (songs||[]).forEach(s => songsMap[s.id] = s);
+  const { data: songs } = await sb.from("songs").select("*").eq("is_active", true).order("position", { ascending:true });
+  ALL_SONGS = songs || [];
+  ALL_SONGS.forEach(s => songsMap[s.id] = s);
 
   await refreshRequests();
   await refreshWishlist();
@@ -373,6 +410,8 @@ function renderRequests(justArrived){
       </div>`;
     }).join("");
   }
+
+  renderSetlist();
 }
 
 async function setRequestStatus(id, status){
@@ -386,6 +425,56 @@ async function markPlayed(id){
   requests = requests.map(r => r.id===id ? {...r, played_at: now} : r);
   renderRequests(false);
   await sb.from("requests").update({ played_at: now }).eq("id", id);
+}
+
+// ---------- Render: Setlista ----------
+function renderSetlist(){
+  const box = document.getElementById("set-results");
+  if (!box) return;
+  const q = norm(document.getElementById("set-search").value);
+  const filtered = ALL_SONGS.filter(s => !q || norm(s.title).includes(q) || norm(s.artist).includes(q));
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty-msg">Ni najdenih komadov.</div>';
+    return;
+  }
+  let html = "";
+  let lastCat = null;
+  filtered.forEach(s=>{
+    if (s.category !== lastCat){
+      html += `<div class="song-cat">${escapeHtml(CATEGORY_LABELS[s.category] || s.category)}</div>`;
+      lastCat = s.category;
+    }
+    const queued = requests.some(r=>r.song_id===s.id && r.status==="accepted" && !r.played_at && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
+    const playedTonight = requests.some(r=>r.song_id===s.id && r.status==="accepted" && r.played_at && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
+    let right;
+    if (queued){
+      right = '<span class="song-badge badge-queued">V vrsti</span>';
+    } else {
+      right = `${playedTonight ? '<span class="song-badge badge-played">Odigrano</span>' : ''}<button class="add-btn" onclick="addToQueue(${s.id})">+ Dodaj</button>`;
+    }
+    html += `<div class="song-item">
+      <div><div class="title">${escapeHtml(s.title)}</div><div class="artist">${escapeHtml(s.artist)}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">${right}</div>
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+
+async function addToQueue(songId){
+  const payload = {
+    song_id: songId,
+    guest_name: "Rok (sam izbral)",
+    amount: 0,
+    message: null,
+    status: "accepted",
+    played_at: null,
+    event_name: CURRENT_EVENT
+  };
+  const { data, error } = await sb.from("requests").insert(payload).select().single();
+  if (error){ console.error(error); return; }
+  requests.unshift(data);
+  renderRequests(false);
+  renderSetlist();
 }
 
 // ---------- Render: Wishlist ----------
