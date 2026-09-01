@@ -72,11 +72,23 @@
   .status-rejected, .status-declined{background:#3a2323;color:var(--danger);}
   .status-next_time{background:#2a2a1c;color:var(--gold);}
   .status-played{background:#1c2a3a;color:#6ab0e0;}
-  .btn-play{background:var(--gold);color:#1a1608;}
   .played-count{color:var(--muted);font-size:0.82rem;margin:-4px 0 10px;}
 
   .empty-msg{color:var(--muted);text-align:center;padding:30px 0;font-size:0.9rem;}
-  .section-label{color:var(--muted);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:22px 0 8px;font-weight:700;}
+  .section-label{color:var(--muted);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:22px 0 8px;font-weight:700;display:flex;align-items:center;gap:8px;}
+
+  .queue-item{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+  .queue-item.played{opacity:0.8;}
+  .queue-pos{font-family:'Fraunces',serif;font-size:1.4rem;color:var(--gold);min-width:26px;text-align:center;}
+  .queue-info{flex:1;min-width:0;}
+  .queue-song{font-weight:600;}
+  .queue-artist{color:var(--muted);font-size:0.85rem;}
+  .queue-guest{color:var(--muted);font-size:0.8rem;margin-top:2px;}
+  .btn-play{background:var(--gold);color:#1a1608;border:none;border-radius:10px;padding:11px 14px;font-weight:700;font-size:0.88rem;cursor:pointer;white-space:nowrap;}
+  .played-tag{background:#1c2a3a;color:#6ab0e0;font-size:1.1rem;border-radius:8px;padding:6px 12px;}
+  .rej-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:12px 14px;margin-bottom:8px;opacity:0.75;}
+  .rej-item .song{font-weight:600;font-size:0.95rem;}
+  .rej-item .artist{color:var(--muted);font-size:0.82rem;}
 </style>
 </head>
 <body>
@@ -115,9 +127,15 @@
   <!-- ZAHTEVKI -->
   <div class="panel active" id="panel-req">
     <div id="req-pending"></div>
-    <div class="section-label">Zgodovina nocojšnjega nastopa</div>
-    <div class="played-count" id="played-count"></div>
-    <div id="req-history"></div>
+
+    <div class="section-label">Čakalna vrsta</div>
+    <div id="req-queue"></div>
+
+    <div class="section-label">🎵 Odigrano nocoj <span id="played-count"></span></div>
+    <div id="req-played"></div>
+
+    <div class="section-label">Zavrnjeno</div>
+    <div id="req-rejected"></div>
   </div>
 
   <!-- ŽELJE -->
@@ -299,30 +317,59 @@ function renderRequests(justArrived){
     }).join("");
   }
 
-  const playedCountBox = document.getElementById("played-count");
-  const playedCount = history.filter(r=>r.status==="accepted" && r.played_at).length;
-  playedCountBox.textContent = playedCount ? `🎵 Odigranih nocoj: ${playedCount}` : "";
+  const queue = history.filter(r=>r.status==="accepted" && !r.played_at)
+    .sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
+  const played = history.filter(r=>r.status==="accepted" && r.played_at)
+    .sort((a,b)=> new Date(b.played_at)-new Date(a.played_at));
+  const rejected = history.filter(r=>r.status!=="accepted");
 
-  const histBox = document.getElementById("req-history");
-  if (!history.length){
-    histBox.innerHTML = '<div class="empty-msg">Še ni zgodovine.</div>';
+  document.getElementById("played-count").textContent = played.length ? `(${played.length})` : "";
+
+  const queueBox = document.getElementById("req-queue");
+  if (!queue.length){
+    queueBox.innerHTML = '<div class="empty-msg">Čakalna vrsta je prazna.</div>';
   } else {
-    histBox.innerHTML = history.map(r=>{
+    queueBox.innerHTML = queue.map((r,i)=>{
       const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
-      const amt = Number(r.amount)>0 ? `<div class="amount">${Number(r.amount).toFixed(2)} €</div>` : `<div class="amount free">brez plačila</div>`;
-      const isPlayed = r.status==="accepted" && r.played_at;
-      const showPlayBtn = r.status==="accepted" && !r.played_at;
-      const pillClass = r.status!=="accepted" ? "status-rejected" : (isPlayed ? "status-played" : "status-accepted");
-      const pillLabel = r.status!=="accepted" ? "Zavrnjeno" : (isPlayed ? "🎵 Odigrano" : "Sprejeto");
-      return `<div class="card">
-        <div class="row1">
-          <div><div class="song">${escapeHtml(song.title)}</div><div class="artist">${escapeHtml(song.artist)}</div></div>
-          ${amt}
+      const tip = Number(r.amount)>0 ? ` · ${Number(r.amount).toFixed(2)} €` : ``;
+      return `<div class="queue-item">
+        <div class="queue-pos">${i+1}</div>
+        <div class="queue-info">
+          <div class="queue-song">${escapeHtml(song.title)}</div>
+          <div class="queue-artist">${escapeHtml(song.artist)}</div>
+          <div class="queue-guest">👤 ${escapeHtml(r.guest_name)}${tip}</div>
         </div>
-        <div class="guest">👤 ${escapeHtml(r.guest_name)}</div>
-        <div class="time">${fmtTime(r.created_at)}</div>
-        <span class="status-pill ${pillClass}">${pillLabel}</span>
-        ${showPlayBtn ? `<div class="actions"><button class="btn-play" onclick="markPlayed('${r.id}')">▶ Odigrano</button></div>` : ``}
+        <button class="btn-play" onclick="markPlayed('${r.id}')">▶ Odigrano</button>
+      </div>`;
+    }).join("");
+  }
+
+  const playedBox = document.getElementById("req-played");
+  if (!played.length){
+    playedBox.innerHTML = '<div class="empty-msg">Še nič odigranega nocoj.</div>';
+  } else {
+    playedBox.innerHTML = played.map(r=>{
+      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      return `<div class="queue-item played">
+        <div class="queue-info">
+          <div class="queue-song">${escapeHtml(song.title)}</div>
+          <div class="queue-artist">${escapeHtml(song.artist)}</div>
+          <div class="queue-guest">👤 ${escapeHtml(r.guest_name)} · ${fmtTime(r.played_at)}</div>
+        </div>
+        <div class="played-tag">🎵</div>
+      </div>`;
+    }).join("");
+  }
+
+  const rejBox = document.getElementById("req-rejected");
+  if (!rejected.length){
+    rejBox.innerHTML = '<div class="empty-msg">Ni zavrnjenih zahtevkov.</div>';
+  } else {
+    rejBox.innerHTML = rejected.map(r=>{
+      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      return `<div class="rej-item">
+        <div class="song">${escapeHtml(song.title)}</div>
+        <div class="artist">${escapeHtml(song.artist)} · 👤 ${escapeHtml(r.guest_name)}</div>
       </div>`;
     }).join("");
   }
