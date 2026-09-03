@@ -711,6 +711,7 @@ async function setWishlistStatus(id, status){
 // Naloži se samo, ko odpreš zavihek — ne teče v ozadju in ne vpliva
 // na odzivnost aplikacije med nastopom.
 let STATS_LOADED = false;
+let STATS_EVENT_REALNAMES = []; // index -> pravo ime dogodka (lahko null), za brisanje
 
 async function loadStats(force){
   if (STATS_LOADED && !force) return;
@@ -737,7 +738,7 @@ function renderStats(playedReq, playedWish){
   const events = {};
   function bucket(name){
     const key = name || "(brez imena dogodka)";
-    if (!events[key]) events[key] = { reqs:[], wish:[], latest:0 };
+    if (!events[key]) events[key] = { reqs:[], wish:[], latest:0, realName: name || null };
     return events[key];
   }
   playedReq.forEach(r=>{
@@ -779,12 +780,19 @@ function renderStats(playedReq, playedWish){
     html += `</div>`;
   }
 
-  eventNames.forEach(name=>{
+  STATS_EVENT_REALNAMES = [];
+  eventNames.forEach((name, idx)=>{
     const b = events[name];
+    STATS_EVENT_REALNAMES[idx] = b.realName;
     const dateStr = b.latest ? new Date(b.latest).toLocaleDateString('sl-SI', {day:'numeric', month:'long', year:'numeric'}) : "";
     html += `<div class="stats-event">
-      <div class="stats-event-title">${escapeHtml(name)}</div>
-      <div class="stats-event-sub">${dateStr}${b.reqs.length ? ` · ${b.reqs.length} odigranih` : ``}${b.wish.length ? ` · ${b.wish.length} glasbenih želja` : ``}</div>`;
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div>
+          <div class="stats-event-title">${escapeHtml(name)}</div>
+          <div class="stats-event-sub">${dateStr}${b.reqs.length ? ` · ${b.reqs.length} odigranih` : ``}${b.wish.length ? ` · ${b.wish.length} glasbenih želja` : ``}</div>
+        </div>
+        <button class="btn-remove" onclick="deleteStatsEvent(${idx})">🗑 Izbriši dogodek</button>
+      </div>`;
 
     if (b.reqs.length){
       html += `<div class="stats-sub-label">🎵 Odigrano</div>`;
@@ -810,6 +818,29 @@ function renderStats(playedReq, playedWish){
   });
 
   box.innerHTML = html;
+}
+
+// Izbriše VSE podatke (zahtevke + glasbene želje) za en dogodek — za čiščenje testnih vnosov.
+async function deleteStatsEvent(idx){
+  const realName = STATS_EVENT_REALNAMES[idx];
+  const label = realName || "(brez imena dogodka)";
+  if (!confirm(`Izbrišem VSE podatke (zahtevke in glasbene želje) za dogodek "${label}"?\n\nTega ni mogoče razveljaviti.`)) return;
+
+  try{
+    if (realName == null){
+      await sb.from("requests").delete().is("event_name", null);
+      await sb.from("wishlist_requests").delete().is("event_name", null);
+    } else {
+      await sb.from("requests").delete().eq("event_name", realName);
+      await sb.from("wishlist_requests").delete().eq("event_name", realName);
+    }
+  }catch(e){ console.error(e); }
+
+  requests = requests.filter(r => (r.event_name ?? null) !== (realName ?? null));
+  wishlist = wishlist.filter(r => (r.event_name ?? null) !== (realName ?? null));
+  renderRequests(false);
+  renderWishlist(false);
+  loadStats(true);
 }
 </script>
 </body>
