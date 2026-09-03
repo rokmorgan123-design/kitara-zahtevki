@@ -80,14 +80,15 @@
   .queue-item{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:14px 16px;margin-bottom:10px;}
   .queue-item.played{opacity:0.8;}
   .queue-pos{font-family:'Fraunces',serif;font-size:1.4rem;color:var(--gold);min-width:26px;text-align:center;}
-  .reorder-btns{display:flex;flex-direction:column;gap:3px;}
-  .reorder-btns button{background:var(--bg2);color:var(--muted);border:1px solid #333;border-radius:6px;width:26px;height:22px;font-size:0.7rem;line-height:1;cursor:pointer;padding:0;}
-  .reorder-btns button:disabled{opacity:0.25;cursor:default;}
+  .drag-handle{color:var(--muted);font-size:1.3rem;line-height:1;padding:6px 2px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;}
+  .queue-item.sortable-ghost{opacity:0.3;}
+  .queue-item.sortable-chosen .drag-handle{color:var(--gold);}
   .queue-info{flex:1;min-width:0;}
   .queue-song{font-weight:600;}
   .queue-artist{color:var(--muted);font-size:0.85rem;}
   .queue-guest{color:var(--muted);font-size:0.8rem;margin-top:2px;}
   .btn-play{background:var(--gold);color:#1a1608;border:none;border-radius:10px;padding:11px 14px;font-weight:700;font-size:0.88rem;cursor:pointer;white-space:nowrap;}
+  .btn-remove{background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:10px;padding:6px 14px;font-weight:600;font-size:0.78rem;cursor:pointer;white-space:nowrap;}
   .played-tag{background:#1c2a3a;color:#6ab0e0;font-size:1.1rem;border-radius:8px;padding:6px 12px;}
   .rej-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:12px 14px;margin-bottom:8px;opacity:0.75;}
   .rej-item .song{font-weight:600;font-size:0.95rem;}
@@ -175,6 +176,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="pesmarica-pages.js"></script>
 <script>
 // ============ NASTAVITVE ============
@@ -204,14 +206,47 @@ function norm(s){
 }
 
 // ---------- Pesmarica: naslov -> stran v pesmarica.pdf ----------
-function findPesmaricaPage(title){
+function splitPesmaricaRaw(raw){
+  const parts = raw.split(/\s[-–]\s/);
+  if (parts.length >= 2){
+    return { t: norm(parts.slice(0,-1).join(" - ")), a: norm(parts[parts.length-1]) };
+  }
+  return { t: norm(raw), a: "" };
+}
+
+function findPesmaricaPage(title, artist){
   const t = norm(title);
   if (!t || !window.PESMARICA_PAGES) return null;
-  const hit = PESMARICA_PAGES.find(e => norm(e.raw).includes(t));
-  return hit ? hit.page : null;
+  const a = norm(artist);
+
+  const parsed = PESMARICA_PAGES.map(e => Object.assign({}, e, splitPesmaricaRaw(e.raw)));
+
+  // 1) Natančno ujemanje naslova (razdvojeno po artistu, če je več zadetkov)
+  const exact = parsed.filter(e => e.t === t);
+  if (exact.length === 1) return exact[0].page;
+  if (exact.length > 1){
+    const byArtist = a && exact.find(e => e.a.includes(a));
+    if (byArtist) return byArtist.page;
+    return exact[0].page;
+  }
+
+  // 2) Ujemanje po celih besedah znotraj celotnega vnosa (rezervna možnost)
+  const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const wordRe = new RegExp("(^|[^a-z0-9čšž])" + escaped + "($|[^a-z0-9čšž])");
+  let candidates = parsed.filter(e => wordRe.test(" " + norm(e.raw) + " "));
+  if (candidates.length){
+    if (a){
+      const byArtist = candidates.find(e => e.a.includes(a));
+      if (byArtist) return byArtist.page;
+    }
+    candidates.sort((x,y)=> x.raw.length - y.raw.length);
+    return candidates[0].page;
+  }
+
+  return null;
 }
-function pesmaricaBtn(title){
-  const page = findPesmaricaPage(title);
+function pesmaricaBtn(title, artist){
+  const page = findPesmaricaPage(title, artist);
   if (!page) return "";
   return `<a href="pesmarica-viewer.html?page=${page}" target="_blank" class="lyrics-btn">📄 Besedilo</a>`;
 }
@@ -269,6 +304,18 @@ function escapeHtml(s){
   return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
+// Doda ali posodobi zahtevek v lokalnem seznamu — prepreči podvajanje,
+// ker Supabase Realtime svojemu lastnemu insertu vrne tudi INSERT dogodek.
+function upsertRequest(row){
+  const idx = requests.findIndex(r=>r.id===row.id);
+  if (idx>-1){
+    requests[idx] = row;
+    return false; // ni nov
+  }
+  requests.unshift(row);
+  return true; // je nov
+}
+
 // ---------- Trenutni dogodek ----------
 async function loadEvent(){
   const { data } = await sb.from("app_settings").select("current_event").eq("id", true).single();
@@ -309,9 +356,9 @@ async function init(){
 
   sb.channel('requests-changes')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, payload => {
-      requests.unshift(payload.new);
-      renderRequests(true);
-      beep();
+      const isNew = upsertRequest(payload.new);
+      renderRequests(isNew);
+      if (isNew) beep();
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'requests' }, payload => {
       const idx = requests.findIndex(r=>r.id===payload.new.id);
@@ -361,7 +408,7 @@ function renderRequests(justArrived){
     pendBox.innerHTML = pending.map(r=>{
       const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
       const amt = Number(r.amount)>0 ? `<div class="amount">${Number(r.amount).toFixed(2)} €</div>` : `<div class="amount free">brez plačila</div>`;
-      const lyrBtn = pesmaricaBtn(song.title);
+      const lyrBtn = pesmaricaBtn(song.title, song.artist);
       return `<div class="card new">
         <div class="row1">
           <div><div class="song">${escapeHtml(song.title)}</div><div class="artist">${escapeHtml(song.artist)}</div></div>
@@ -379,8 +426,8 @@ function renderRequests(justArrived){
     }).join("");
   }
 
-  const queue = history.filter(r=>r.status==="accepted" && !r.played_at)
-    .sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
+  const queueRaw = history.filter(r=>r.status==="accepted" && !r.played_at);
+  const queue = ensureQueueOrder(queueRaw);
   const played = history.filter(r=>r.status==="accepted" && r.played_at)
     .sort((a,b)=> new Date(b.played_at)-new Date(a.played_at));
   const rejected = history.filter(r=>r.status!=="accepted");
@@ -395,14 +442,9 @@ function renderRequests(justArrived){
     queueBox.innerHTML = queue.map((r,i)=>{
       const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
       const tip = Number(r.amount)>0 ? ` · ${Number(r.amount).toFixed(2)} €` : ``;
-      const lyrBtn = pesmaricaBtn(song.title);
-      const upDisabled = i===0 ? "disabled" : "";
-      const downDisabled = i===queue.length-1 ? "disabled" : "";
-      return `<div class="queue-item">
-        <div class="reorder-btns">
-          <button ${upDisabled} onclick="moveQueueItem('${r.id}',-1)" aria-label="Premakni gor">▲</button>
-          <button ${downDisabled} onclick="moveQueueItem('${r.id}',1)" aria-label="Premakni dol">▼</button>
-        </div>
+      const lyrBtn = pesmaricaBtn(song.title, song.artist);
+      return `<div class="queue-item" data-id="${r.id}">
+        <div class="drag-handle" aria-label="Primi in premakni">⠿</div>
         <div class="queue-pos">${i+1}</div>
         <div class="queue-info">
           <div class="queue-song">${escapeHtml(song.title)}</div>
@@ -412,10 +454,12 @@ function renderRequests(justArrived){
         <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
           ${lyrBtn}
           <button class="btn-play" onclick="markPlayed('${r.id}')">▶ Odigrano</button>
+          <button class="btn-remove" onclick="removeFromQueue('${r.id}')">🗑 Odstrani</button>
         </div>
       </div>`;
     }).join("");
   }
+  initQueueSortable();
 
   const playedBox = document.getElementById("req-played");
   if (!played.length){
@@ -451,9 +495,13 @@ function renderRequests(justArrived){
 }
 
 async function setRequestStatus(id, status){
-  requests = requests.map(r => r.id===id ? {...r, status} : r);
+  const updates = { status };
+  if (status === "accepted"){
+    updates.queue_order = nextQueueOrder();
+  }
+  requests = requests.map(r => r.id===id ? {...r, ...updates} : r);
   renderRequests(false);
-  await sb.from("requests").update({ status }).eq("id", id);
+  await sb.from("requests").update(updates).eq("id", id);
 }
 
 async function markPlayed(id){
@@ -463,26 +511,73 @@ async function markPlayed(id){
   await sb.from("requests").update({ played_at: now }).eq("id", id);
 }
 
-// ---------- Ročno preurejanje vrstnega reda v čakalni vrsti ----------
-async function moveQueueItem(id, dir){
-  const idx = currentQueue.findIndex(r=>r.id===id);
-  const swapIdx = idx + dir;
-  if (idx===-1 || swapIdx<0 || swapIdx>=currentQueue.length) return;
-  const a = currentQueue[idx];
-  const b = currentQueue[swapIdx];
-  const aTime = a.created_at, bTime = b.created_at;
+// ---------- Ročno preurejanje vrstnega reda v čakalni vrsti (queue_order) ----------
 
-  // Zamenjamo created_at med sosedoma — s tem zamenjamo njun vrstni red,
-  // ker je čakalna vrsta razvrščena po created_at.
-  requests = requests.map(r=>{
-    if (r.id===a.id) return {...r, created_at: bTime};
-    if (r.id===b.id) return {...r, created_at: aTime};
-    return r;
+// Poskrbi, da ima vsak zahtevek v čakalni vrsti nastavljen queue_order.
+// Starejši zapisi (ali prvi zagon po dodani koloni) dobijo zaporedno številko
+// glede na created_at, kar ohrani obstoječi vrstni red.
+function ensureQueueOrder(queueRaw){
+  const sorted = [...queueRaw].sort((a,b)=>{
+    if (a.queue_order!=null && b.queue_order!=null) return a.queue_order-b.queue_order;
+    if (a.queue_order!=null) return -1;
+    if (b.queue_order!=null) return 1;
+    return new Date(a.created_at)-new Date(b.created_at);
+  });
+  let maxOrder = sorted.reduce((m,r)=> r.queue_order!=null ? Math.max(m,r.queue_order) : m, 0);
+  sorted.forEach(r=>{
+    if (r.queue_order==null){
+      maxOrder += 1;
+      r.queue_order = maxOrder;
+      sb.from("requests").update({ queue_order: maxOrder }).eq("id", r.id);
+    }
+  });
+  return sorted;
+}
+
+function nextQueueOrder(){
+  let max = 0;
+  requests.forEach(r=>{
+    if (r.status==="accepted" && !r.played_at && r.queue_order!=null) max = Math.max(max, r.queue_order);
+  });
+  return max + 1;
+}
+
+// SortableJS: primi-in-povleci preurejanje čakalne vrste (miška in dotik)
+function initQueueSortable(){
+  const el = document.getElementById("req-queue");
+  if (!el || typeof Sortable === "undefined" || el._sortableInstance) return;
+  el._sortableInstance = Sortable.create(el, {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: function(){
+      const ids = Array.from(el.children).map(ch => ch.dataset.id).filter(Boolean);
+      reorderQueue(ids);
+    }
+  });
+}
+
+async function reorderQueue(ids){
+  const changes = [];
+  ids.forEach((id, i)=>{
+    const order = i+1;
+    const r = requests.find(x=>x.id===id);
+    if (r && r.queue_order !== order){
+      r.queue_order = order;
+      changes.push({ id, order });
+    }
   });
   renderRequests(false);
+  for (const c of changes){
+    await sb.from("requests").update({ queue_order: c.order }).eq("id", c.id);
+  }
+}
 
-  await sb.from("requests").update({ created_at: bTime }).eq("id", a.id);
-  await sb.from("requests").update({ created_at: aTime }).eq("id", b.id);
+// Odstrani komad iz čakalne vrste brez oznake "odigrano" (npr. pomotoma dodan komad)
+async function removeFromQueue(id){
+  if (!confirm("Odstrani komad iz čakalne vrste?")) return;
+  requests = requests.map(r => r.id===id ? {...r, status:"rejected"} : r);
+  renderRequests(false);
+  await sb.from("requests").update({ status: "rejected" }).eq("id", id);
 }
 
 // ---------- Render: Setlista ----------
@@ -504,7 +599,7 @@ function renderSetlist(){
     }
     const queued = requests.some(r=>r.song_id===s.id && r.status==="accepted" && !r.played_at && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
     const playedTonight = requests.some(r=>r.song_id===s.id && r.status==="accepted" && r.played_at && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
-    const lyrBtn = pesmaricaBtn(s.title);
+    const lyrBtn = pesmaricaBtn(s.title, s.artist);
     let right;
     if (queued){
       right = '<span class="song-badge badge-queued">V vrsti</span>';
@@ -527,13 +622,13 @@ async function addToQueue(songId){
     message: null,
     status: "accepted",
     played_at: null,
-    event_name: CURRENT_EVENT
+    event_name: CURRENT_EVENT,
+    queue_order: nextQueueOrder()
   };
   const { data, error } = await sb.from("requests").insert(payload).select().single();
   if (error){ console.error(error); return; }
-  requests.unshift(data);
+  upsertRequest(data);
   renderRequests(false);
-  renderSetlist();
 }
 
 // ---------- Render: Wishlist ----------
