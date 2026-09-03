@@ -35,6 +35,7 @@ window.PESMARICA_PAGES = [
   {raw:"NEDELJA - PARNI VALJAK", page:36},
   {raw:"SHOOK ME ALL NIGHT LONG – AC/DC", page:37},
   {raw:"SHOULD I STAY OD SHOULD I GO – THE CLASH", page:38},
+  {raw:"SHOULD I STAY OR SHOULD I GO – THE CLASH", page:38},
   {raw:"VALERIE – AMY WINHOUSE", page:39},
   {raw:"HIT THE ROAD JACK – RAY CHARLES", page:40},
   {raw:"CESARICA - OLIVER DRAGOJEVIĆ", page:41},
