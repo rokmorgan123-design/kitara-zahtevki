@@ -42,8 +42,8 @@
   .event-editor .save-btn{background:var(--gold);color:#1a1608;}
   .event-editor .cancel-btn{background:var(--bg2);color:var(--muted);border:1px solid #333;}
 
-  .tabs{display:flex;gap:8px;margin-bottom:16px;}
-  .tab{flex:1;text-align:center;padding:11px;border-radius:12px;background:var(--card);border:1px solid #2a2a2a;color:var(--muted);font-weight:600;cursor:pointer;}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;}
+  .tab{flex:1;text-align:center;padding:11px 4px;border-radius:12px;background:var(--card);border:1px solid #2a2a2a;color:var(--muted);font-weight:600;font-size:0.86rem;cursor:pointer;}
   .tab.active{background:var(--gold);color:#1a1608;border-color:var(--gold);}
   .badge{background:var(--danger);color:#fff;border-radius:20px;padding:1px 7px;font-size:0.72rem;margin-left:6px;}
 
@@ -106,6 +106,19 @@
   .add-btn{background:var(--gold);color:#1a1608;border:none;border-radius:10px;padding:9px 14px;font-weight:700;font-size:0.85rem;cursor:pointer;white-space:nowrap;}
   .lyrics-btn{background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:6px 10px;font-weight:600;font-size:0.78rem;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;}
   .lyrics-row{margin:8px 0 0;}
+
+  .stats-refresh{background:var(--bg2);color:var(--text);border:1px solid #333;border-radius:10px;padding:8px 14px;font-weight:600;font-size:0.82rem;cursor:pointer;margin-bottom:14px;}
+  .stats-event{background:var(--card);border:1px solid #2a2a2a;border-radius:var(--radius);padding:15px;margin-bottom:14px;}
+  .stats-event-title{font-family:'Fraunces',serif;color:var(--gold);font-size:1.1rem;margin-bottom:2px;}
+  .stats-event-sub{color:var(--muted);font-size:0.78rem;margin-bottom:10px;}
+  .stats-sub-label{color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:10px 0 6px;}
+  .stats-song-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #262626;font-size:0.9rem;}
+  .stats-song-row:last-child{border-bottom:none;}
+  .stats-song-title{font-weight:600;}
+  .stats-song-artist{color:var(--muted);font-size:0.8rem;}
+  .stats-count{background:var(--bg2);color:var(--gold);border-radius:10px;padding:2px 9px;font-size:0.78rem;font-weight:700;white-space:nowrap;}
+  .stats-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #262626;}
+  .stats-top:last-child{border-bottom:none;}
 </style>
 </head>
 <body>
@@ -143,6 +156,7 @@
     <div class="tab active" id="tab-req" onclick="switchTab('req')">Zahtevki <span class="badge" id="badge-req" style="display:none;">0</span></div>
     <div class="tab" id="tab-wish" onclick="switchTab('wish')">Želje <span class="badge" id="badge-wish" style="display:none;">0</span></div>
     <div class="tab" id="tab-set" onclick="switchTab('set')">Setlista</div>
+    <div class="tab" id="tab-stats" onclick="switchTab('stats')">Statistika</div>
   </div>
 
   <!-- ZAHTEVKI -->
@@ -172,6 +186,11 @@
       <input type="text" id="set-search" placeholder="Išči po naslovu ali izvajalcu… " oninput="renderSetlist()">
     </div>
     <div id="set-results"></div>
+  </div>
+
+  <!-- STATISTIKA -->
+  <div class="panel" id="panel-stats">
+    <div id="stats-content"><div class="empty-msg">Nalagam statistiko…</div></div>
   </div>
 </div>
 
@@ -275,10 +294,13 @@ function switchTab(t){
   document.getElementById("tab-req").classList.toggle("active", t==="req");
   document.getElementById("tab-wish").classList.toggle("active", t==="wish");
   document.getElementById("tab-set").classList.toggle("active", t==="set");
+  document.getElementById("tab-stats").classList.toggle("active", t==="stats");
   document.getElementById("panel-req").classList.toggle("active", t==="req");
   document.getElementById("panel-wish").classList.toggle("active", t==="wish");
   document.getElementById("panel-set").classList.toggle("active", t==="set");
+  document.getElementById("panel-stats").classList.toggle("active", t==="stats");
   if (t==="set") renderSetlist();
+  if (t==="stats") loadStats(false);
 }
 
 // ---------- Sound + vibration ----------
@@ -683,6 +705,111 @@ async function setWishlistStatus(id, status){
   wishlist = wishlist.map(r => r.id===id ? {...r, status} : r);
   renderWishlist(false);
   await sb.from("wishlist_requests").update({ status }).eq("id", id);
+}
+
+// ---------- Statistika (odigrani komadi po koncertih) ----------
+// Naloži se samo, ko odpreš zavihek — ne teče v ozadju in ne vpliva
+// na odzivnost aplikacije med nastopom.
+let STATS_LOADED = false;
+
+async function loadStats(force){
+  if (STATS_LOADED && !force) return;
+  const box = document.getElementById("stats-content");
+  box.innerHTML = '<div class="empty-msg">Nalagam statistiko…</div>';
+
+  const [playedReqRes, playedWishRes] = await Promise.all([
+    sb.from("requests").select("*").eq("status","accepted").not("played_at","is",null).order("played_at",{ ascending:false }).limit(5000),
+    sb.from("wishlist_requests").select("*").eq("status","playing_today").order("created_at",{ ascending:false }).limit(5000)
+  ]);
+
+  renderStats(playedReqRes.data || [], playedWishRes.data || []);
+  STATS_LOADED = true;
+}
+
+function renderStats(playedReq, playedWish){
+  const box = document.getElementById("stats-content");
+  if (!playedReq.length && !playedWish.length){
+    box.innerHTML = '<div class="empty-msg">Še ni zgodovine odigranih komadov.</div>';
+    return;
+  }
+
+  // Razvrsti po dogodku (koncertu)
+  const events = {};
+  function bucket(name){
+    const key = name || "(brez imena dogodka)";
+    if (!events[key]) events[key] = { reqs:[], wish:[], latest:0 };
+    return events[key];
+  }
+  playedReq.forEach(r=>{
+    const b = bucket(r.event_name);
+    b.reqs.push(r);
+    const t = new Date(r.played_at).getTime();
+    if (t > b.latest) b.latest = t;
+  });
+  playedWish.forEach(r=>{
+    const b = bucket(r.event_name);
+    b.wish.push(r);
+    const t = new Date(r.created_at).getTime();
+    if (t > b.latest) b.latest = t;
+  });
+  const eventNames = Object.keys(events).sort((a,b)=> events[b].latest - events[a].latest);
+
+  // Skupno najbolj igrani komadi (vsi dogodki skupaj)
+  const songCounts = {};
+  playedReq.forEach(r=>{
+    const song = songsMap[r.song_id];
+    const key = song ? (song.title + " — " + song.artist) : "(neznan komad)";
+    songCounts[key] = (songCounts[key]||0) + 1;
+  });
+  const topSongs = Object.entries(songCounts).sort((a,b)=> b[1]-a[1]).slice(0,10);
+
+  let html = `<button class="stats-refresh" onclick="loadStats(true)">↻ Osveži statistiko</button>`;
+
+  if (topSongs.length){
+    html += `<div class="stats-event">
+      <div class="stats-event-title">🏆 Skupno najbolj igrani</div>
+      <div class="stats-event-sub">Vsi dogodki skupaj</div>`;
+    topSongs.forEach(([label,count])=>{
+      const [title, artist] = label.split(" — ");
+      html += `<div class="stats-top">
+        <div><div class="stats-song-title">${escapeHtml(title)}</div>${artist ? `<div class="stats-song-artist">${escapeHtml(artist)}</div>` : ``}</div>
+        <div class="stats-count">${count}×</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  eventNames.forEach(name=>{
+    const b = events[name];
+    const dateStr = b.latest ? new Date(b.latest).toLocaleDateString('sl-SI', {day:'numeric', month:'long', year:'numeric'}) : "";
+    html += `<div class="stats-event">
+      <div class="stats-event-title">${escapeHtml(name)}</div>
+      <div class="stats-event-sub">${dateStr}${b.reqs.length ? ` · ${b.reqs.length} odigranih` : ``}${b.wish.length ? ` · ${b.wish.length} glasbenih želja` : ``}</div>`;
+
+    if (b.reqs.length){
+      html += `<div class="stats-sub-label">🎵 Odigrano</div>`;
+      b.reqs.sort((x,y)=> new Date(x.played_at)-new Date(y.played_at)).forEach(r=>{
+        const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+        html += `<div class="stats-song-row">
+          <div><div class="stats-song-title">${escapeHtml(song.title)}</div><div class="stats-song-artist">${escapeHtml(song.artist)} · 👤 ${escapeHtml(r.guest_name)}</div></div>
+          <div class="stats-count">${fmtTime(r.played_at)}</div>
+        </div>`;
+      });
+    }
+
+    if (b.wish.length){
+      html += `<div class="stats-sub-label">⭐ Glasbene želje (odigrane)</div>`;
+      b.wish.sort((x,y)=> new Date(x.created_at)-new Date(y.created_at)).forEach(r=>{
+        html += `<div class="stats-song-row">
+          <div><div class="stats-song-title">${escapeHtml(r.title)}</div><div class="stats-song-artist">${escapeHtml(r.artist)}${r.guest_name ? ` · 👤 ${escapeHtml(r.guest_name)}` : ``}</div></div>
+        </div>`;
+      });
+    }
+
+    html += `</div>`;
+  });
+
+  box.innerHTML = html;
 }
 </script>
 </body>
