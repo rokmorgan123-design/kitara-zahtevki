@@ -91,7 +91,6 @@
 
   .queue-item{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:14px 16px;margin-bottom:10px;}
   .queue-item.mine{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
-  .queue-pos{font-family:'Fraunces',serif;font-size:1.4rem;color:var(--gold);min-width:28px;text-align:center;}
   .queue-info{flex:1;}
   .queue-song{font-weight:600;}
   .queue-artist{color:var(--muted);font-size:0.85rem;}
@@ -100,6 +99,21 @@
   .queue-item.played{opacity:0.85;}
   .played-tag{background:#1c2a3a;color:#6ab0e0;font-size:1.1rem;border-radius:8px;padding:4px 10px;}
   .section-label{color:var(--muted);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:22px 0 8px;font-weight:700;}
+
+  .my-status{border-radius:var(--radius);padding:14px 16px;margin-bottom:4px;border:1px solid #2c2c2c;background:var(--card);}
+  .my-status .my-status-label{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .my-status .my-status-song{font-family:'Fraunces',serif;font-size:1.05rem;}
+  .my-status .my-status-state{font-weight:700;margin-top:4px;}
+  .my-status.pending{border-color:#3a3320;}
+  .my-status.pending .my-status-state{color:var(--gold);}
+  .my-status.accepted{border-color:#2a3a2c;}
+  .my-status.accepted .my-status-state{color:var(--ok);}
+  .my-status.queued{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+  .my-status.queued .my-status-state{color:var(--gold);}
+  .my-status.played{border-color:#1c2a3a;}
+  .my-status.played .my-status-state{color:#6ab0e0;}
+  .my-status.rejected{border-color:#3a2323;}
+  .my-status.rejected .my-status-state{color:var(--danger);}
 
   .ig-footer{margin-top:26px;padding-top:22px;border-top:1px solid #262626;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;}
   .ig-footer a{display:flex;flex-direction:column;align-items:center;gap:10px;text-decoration:none;}
@@ -120,13 +134,13 @@
       <span>Izberi komad / Song Request<small>Poglej seznam in pošlji zahtevek · Browse the list and send a request</small></span>
     </button>
     <button class="big-btn" onclick="goQueue()">
-  <span class="emoji">🎶</span>
-  <span>Vrstni red / Live Queue<small>Kdaj bo na vrsti tvoj komad · When your song is up</small></span>
-</button>
-<button class="big-btn" onclick="goWishlist()">
-  <span class="emoji">💌</span>
-  <span>Predlagaj komad / Suggest a Song<small>Ki ga nimam (še) v repertoarju · Not in my repertoire (yet)</small></span>
-</button>
+      <span class="emoji">🎶</span>
+      <span>Vrstni red / Live Queue<small>Kdaj bo na vrsti tvoj komad · When your song is up</small></span>
+    </button>
+    <button class="big-btn" onclick="goWishlist()">
+      <span class="emoji">💌</span>
+      <span>Predlagaj komad / Suggest a Song<small>Ki ga nimam (še) v repertoarju · Not in my repertoire (yet)</small></span>
+    </button>
     <button class="big-btn" onclick="goVizitka()">
       <span class="emoji">🪪</span>
       <span>Vizitka / Business Card<small>Kontaktni podatki · Contact info</small></span>
@@ -151,6 +165,7 @@
     <button class="back" onclick="goHome()">← Nazaj / Back</button>
     <h3 style="color:var(--gold);margin-bottom:2px;">Vrstni red nocojšnjega večera</h3>
     <p style="color:var(--muted);font-size:0.88rem;margin-top:0;">Tvoj komad je označen z zlato · Your song is highlighted in gold</p>
+    <div id="my-status-box" style="display:none;"></div>
     <div id="queue-list"></div>
     <div class="section-label">🎵 Ravnokar odigrano / Just played</div>
     <div id="played-list"></div>
@@ -301,6 +316,7 @@ let queueRequests = [];
 let playedRequests = [];
 let eventRequests = [];
 let myLastRequestId = null;
+try{ myLastRequestId = localStorage.getItem("my_last_request_id") || null; }catch(e){}
 
 async function loadCurrentEvent(){
   const { data } = await sb.from("app_settings").select("current_event").eq("id", true).single();
@@ -325,17 +341,24 @@ function goVizitka(){ show("view-vizitka"); }
 function goQueue(){ show("view-queue"); loadEventRequests(); }
 
 async function loadEventRequests(){
-  const { data } = await sb.from("requests").select("*").eq("status","accepted").order("created_at", { ascending:true });
+  // Samo tisto, kar je Rok zavestno izdal v VIDNO čakalno vrsto (SPREMEMBA 3/4) —
+  // ne celotna njegova zasebna banka. Razvrščeno po queue_order (brez oštevilčenih pozicij v UI).
+  const { data } = await sb.from("requests").select("*").eq("status","accepted");
   eventRequests = (data||[]).filter(r => !CURRENT_EVENT || r.event_name === CURRENT_EVENT);
-  queueRequests = eventRequests.filter(r => !r.played_at);
+  queueRequests = eventRequests
+    .filter(r => r.released_to_queue && !r.played_at && !r.merged_into)
+    .sort((a,b)=> (a.queue_order ?? 0) - (b.queue_order ?? 0));
   playedRequests = eventRequests.filter(r => r.played_at).sort((a,b)=> new Date(b.played_at) - new Date(a.played_at));
   renderQueue();
   renderPlayed();
   renderSongs();
+  refreshMyStatus();
 }
 
 function songBadge(songId){
-  if (eventRequests.some(r => r.song_id===songId && !r.played_at)) return '<span class="song-badge badge-queued">V vrsti / In queue</span>';
+  // Zasebna banka (potrjeno, a še ne izdano) se namenoma NE prikazuje tukaj —
+  // publika vidi samo to, kar je Rok dejansko spustil v vidno vrsto.
+  if (eventRequests.some(r => r.song_id===songId && r.released_to_queue && !r.played_at)) return '<span class="song-badge badge-queued">V vrsti / In queue</span>';
   if (eventRequests.some(r => r.song_id===songId && r.played_at)) return '<span class="song-badge badge-played">Odigrano / Played</span>';
   return '';
 }
@@ -351,11 +374,11 @@ function renderQueue(){
     box.innerHTML = '<div class="empty-msg">Trenutno ni ničesar v vrsti.<br>Nothing in the queue right now.</div>';
     return;
   }
-  box.innerHTML = queueRequests.map((r,i)=>{
+  // Namenoma brez oštevilčenih pozicij (SPREMEMBA 4) — samo seznam "kaj pride kmalu".
+  box.innerHTML = queueRequests.map((r)=>{
     const song = ALL_SONGS.find(s=>s.id===r.song_id) || {title:"—", artist:""};
     const mine = r.id === myLastRequestId;
     return `<div class="queue-item${mine ? ' mine' : ''}">
-      <div class="queue-pos">${i+1}</div>
       <div class="queue-info">
         <div class="queue-song">${escapeHtml(song.title)}</div>
         <div class="queue-artist">${escapeHtml(song.artist)}</div>
@@ -363,6 +386,42 @@ function renderQueue(){
       ${mine ? '<div class="queue-you">TVOJ<br>YOURS</div>' : ''}
     </div>`;
   }).join("");
+}
+
+// Tristopenjski status LASTNE zadnje želje (SPREMEMBA 3): poslano / sprejeto v banko / v vidni vrsti / odigrano.
+// Sledi tudi kazalcu merged_into, če je bila želja avtomatsko združena z že obstoječim vnosom (SPREMEMBA 6).
+async function refreshMyStatus(){
+  const box = document.getElementById("my-status-box");
+  if (!box) return;
+  if (!myLastRequestId){ box.style.display = "none"; return; }
+
+  const { data: row } = await sb.from("requests").select("*").eq("id", myLastRequestId).single();
+  if (!row){ box.style.display = "none"; return; }
+
+  let effective = row;
+  if (row.merged_into){
+    const { data: primary } = await sb.from("requests").select("*").eq("id", row.merged_into).single();
+    if (primary) effective = primary;
+  }
+
+  const song = ALL_SONGS.find(s=>s.id===row.song_id) || {title:"—", artist:""};
+  let stateClass, stateText;
+  if (effective.played_at){
+    stateClass = "played"; stateText = "🎵 Odigrano! / Played!";
+  } else if (effective.released_to_queue){
+    stateClass = "queued"; stateText = "🎶 Prihaja kmalu! / Coming up soon!";
+  } else if (effective.status === "accepted"){
+    stateClass = "accepted"; stateText = "✓ Sprejeto! / Accepted!";
+  } else if (effective.status === "rejected"){
+    stateClass = "rejected"; stateText = "Žal tokrat ne. / Not this time.";
+  } else {
+    stateClass = "pending"; stateText = "⏳ Poslano, čakam potrditev… / Sent, awaiting confirmation…";
+  }
+  box.className = "my-status " + stateClass;
+  box.style.display = "block";
+  box.innerHTML = `<div class="my-status-label">Tvoja zadnja želja / Your last request</div>
+    <div class="my-status-song">${escapeHtml(song.title)}${song.artist ? " — "+escapeHtml(song.artist) : ""}</div>
+    <div class="my-status-state">${stateText}</div>`;
 }
 
 function renderPlayed(){
@@ -489,6 +548,7 @@ async function submitRequest(){
   if (error){ err.textContent = "Prišlo je do napake, poskusi znova. / Something went wrong, try again."; console.error(error); return; }
 
   myLastRequestId = data ? data.id : null;
+  try{ if (myLastRequestId) localStorage.setItem("my_last_request_id", myLastRequestId); }catch(e){}
   lastSubmitAt = Date.now();
   const revArea = document.getElementById("revolut-area");
   if (amount > 0){
