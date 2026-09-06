@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Nadzorna plošča — Rok Morgan</title>
+<meta name="theme-color" content="#121212">
+<meta name="robots" content="noindex, nofollow">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121212; --bg2:#1b1b1b; --card:#1f1f1f; --text:#f3efe7; --muted:#a8a29a;
+    --gold:#e0b84c; --danger:#e05a4c; --ok:#4caf7d; --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
+  h1,h2,h3{font-family:'Fraunces',serif;margin:0;}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 14px 60px;}
+
+  /* PIN gate */
+  #pin-gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;flex-direction:column;gap:16px;}
+  #pin-gate h2{color:var(--gold);}
+  #pin-input{font-size:1.6rem;letter-spacing:0.4em;text-align:center;width:200px;background:var(--bg2);border:1px solid #333;border-radius:12px;padding:12px;color:var(--text);}
+  #pin-gate button{background:var(--gold);color:#1a1608;border:none;border-radius:12px;padding:12px 26px;font-weight:700;font-size:1rem;cursor:pointer;}
+  #pin-error{color:var(--danger);font-size:0.85rem;min-height:1.2em;}
+
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:10px 0 16px;}
+  header.top h1{font-size:1.15rem;color:var(--gold);}
+  .live-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px;box-shadow:0 0 6px var(--ok);}
+
+  .event-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--gold);border-radius:12px;padding:12px 14px;margin-bottom:16px;gap:10px;}
+  .event-bar .event-label{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .event-bar .event-name{font-family:'Fraunces',serif;font-size:1.05rem;color:var(--gold);margin-top:2px;}
+  .event-btn{background:var(--bg2);color:var(--text);border:1px solid #333;border-radius:10px;padding:9px 14px;font-weight:600;font-size:0.85rem;cursor:pointer;white-space:nowrap;}
+  .event-editor{display:none;gap:8px;margin-bottom:16px;}
+  .event-editor input{flex:1;background:var(--bg2);border:1px solid #333;border-radius:10px;padding:11px 12px;color:var(--text);font-size:0.95rem;font-family:inherit;}
+  .event-editor button{border:none;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer;}
+  .event-editor .save-btn{background:var(--gold);color:#1a1608;}
+  .event-editor .cancel-btn{background:var(--bg2);color:var(--muted);border:1px solid #333;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:16px;}
+  .tab{flex:1;text-align:center;padding:11px 4px;border-radius:12px;background:var(--card);border:1px solid #2a2a2a;color:var(--muted);font-weight:600;font-size:0.86rem;cursor:pointer;}
+  .tab.active{background:var(--gold);color:#1a1608;border-color:var(--gold);}
+  .badge{background:var(--danger);color:#fff;border-radius:20px;padding:1px 7px;font-size:0.72rem;margin-left:6px;}
+
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .card{background:var(--card);border:1px solid #2a2a2a;border-radius:var(--radius);padding:15px;margin-bottom:12px;}
+  .card.new{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;animation:pop .5s ease;}
+  @keyframes pop{0%{transform:scale(0.97);opacity:0.4}100%{transform:scale(1);opacity:1}}
+  .card .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .card .song{font-family:'Fraunces',serif;font-size:1.1rem;}
+  .card .artist{color:var(--muted);font-size:0.85rem;}
+  .card .amount{background:var(--gold);color:#1a1608;font-weight:700;border-radius:10px;padding:4px 10px;font-size:0.9rem;white-space:nowrap;}
+  .card .amount.free{background:#333;color:var(--muted);}
+  .card .guest{margin-top:8px;font-weight:600;}
+  .card .msg{color:var(--muted);font-size:0.88rem;margin-top:3px;font-style:italic;}
+  .card .time{color:#5c5850;font-size:0.75rem;margin-top:6px;}
+  .card .actions{display:flex;gap:10px;margin-top:12px;}
+  .card .actions button{flex:1;padding:11px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:0.95rem;}
+  .btn-accept{background:var(--ok);color:#0c2318;}
+  .btn-reject{background:#3a2c2a;color:var(--danger);}
+  .btn-alt{background:var(--bg2);color:var(--text);border:1px solid #333 !important;}
+
+  .status-pill{display:inline-block;border-radius:20px;padding:3px 10px;font-size:0.75rem;font-weight:700;margin-top:8px;}
+  .status-accepted, .status-playing_today{background:#213a2c;color:var(--ok);}
+  .status-rejected, .status-declined{background:#3a2323;color:var(--danger);}
+  .status-next_time{background:#2a2a1c;color:var(--gold);}
+  .status-played{background:#1c2a3a;color:#6ab0e0;}
+  .played-count{color:var(--muted);font-size:0.82rem;margin:-4px 0 10px;}
+
+  .empty-msg{color:var(--muted);text-align:center;padding:30px 0;font-size:0.9rem;}
+  .section-label{color:var(--muted);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:22px 0 8px;font-weight:700;display:flex;align-items:center;gap:8px;}
+
+  .queue-item{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+  .queue-item.played{opacity:0.8;}
+  .queue-pos{font-family:'Fraunces',serif;font-size:1.4rem;color:var(--gold);min-width:26px;text-align:center;}
+  .drag-handle{color:var(--muted);font-size:1.3rem;line-height:1;padding:6px 2px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;}
+  .queue-item.sortable-ghost{opacity:0.3;}
+  .queue-item.sortable-chosen .drag-handle{color:var(--gold);}
+  .queue-info{flex:1;min-width:0;}
+  .queue-song{font-weight:600;}
+  .queue-artist{color:var(--muted);font-size:0.85rem;}
+  .queue-guest{color:var(--muted);font-size:0.8rem;margin-top:2px;}
+  .btn-play{background:var(--gold);color:#1a1608;border:none;border-radius:10px;padding:11px 14px;font-weight:700;font-size:0.88rem;cursor:pointer;white-space:nowrap;}
+  .btn-remove{background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:10px;padding:6px 14px;font-weight:600;font-size:0.78rem;cursor:pointer;white-space:nowrap;}
+  .played-tag{background:#1c2a3a;color:#6ab0e0;font-size:1.1rem;border-radius:8px;padding:6px 12px;}
+  .rej-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:12px 14px;margin-bottom:8px;opacity:0.75;}
+  .rej-item .song{font-weight:600;font-size:0.95rem;}
+  .rej-item .artist{color:var(--muted);font-size:0.82rem;}
+
+  .search-box{position:sticky;top:0;background:var(--bg);padding-bottom:10px;z-index:5;}
+  .search-box input{width:100%;background:var(--bg2);border:1px solid #333;border-radius:12px;padding:13px 14px;color:var(--text);font-size:1rem;font-family:inherit;}
+  .song-cat{color:var(--gold);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 6px;font-weight:700;}
+  .song-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:13px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .song-item .title{font-weight:600;}
+  .song-item .artist{color:var(--muted);font-size:0.85rem;}
+  .song-badge{display:inline-block;font-size:0.68rem;font-weight:700;border-radius:8px;padding:3px 8px;white-space:nowrap;}
+  .badge-queued{background:#2a2a1c;color:var(--gold);}
+  .badge-played{background:#1c2a3a;color:#6ab0e0;}
+  .badge-bank{background:#2a1c2e;color:#c98fe0;}
+  .btn-release{background:var(--ok);color:#0c2318;border:none;border-radius:10px;padding:11px 14px;font-weight:700;font-size:0.88rem;cursor:pointer;white-space:nowrap;}
+  .add-btn{background:var(--gold);color:#1a1608;border:none;border-radius:10px;padding:9px 14px;font-weight:700;font-size:0.85rem;cursor:pointer;white-space:nowrap;}
+  .lyrics-btn{background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:6px 10px;font-weight:600;font-size:0.78rem;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;}
+  .lyrics-row{margin:8px 0 0;}
+
+  .stats-refresh{background:var(--bg2);color:var(--text);border:1px solid #333;border-radius:10px;padding:8px 14px;font-weight:600;font-size:0.82rem;cursor:pointer;margin-bottom:14px;}
+  .stats-event{background:var(--card);border:1px solid #2a2a2a;border-radius:var(--radius);padding:15px;margin-bottom:14px;}
+  .stats-event-title{font-family:'Fraunces',serif;color:var(--gold);font-size:1.1rem;margin-bottom:2px;}
+  .stats-event-sub{color:var(--muted);font-size:0.78rem;margin-bottom:10px;}
+  .stats-sub-label{color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:10px 0 6px;}
+  .stats-song-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #262626;font-size:0.9rem;}
+  .stats-song-row:last-child{border-bottom:none;}
+  .stats-song-title{font-weight:600;}
+  .stats-song-artist{color:var(--muted);font-size:0.8rem;}
+  .stats-count{background:var(--bg2);color:var(--gold);border-radius:10px;padding:2px 9px;font-size:0.78rem;font-weight:700;white-space:nowrap;}
+  .stats-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #262626;}
+  .stats-top:last-child{border-bottom:none;}
+
+  .preset-card{background:var(--card);border:1px solid #2a2a2a;border-radius:var(--radius);padding:15px;margin-bottom:12px;}
+  .preset-card .preset-name{font-family:'Fraunces',serif;font-size:1.1rem;color:var(--gold);}
+  .preset-card .preset-sub{color:var(--muted);font-size:0.8rem;margin:2px 0 10px;}
+  .preset-card .preset-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .preset-card .preset-actions button{flex:1;min-width:70px;padding:9px;border-radius:10px;border:none;font-weight:700;font-size:0.82rem;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div id="pin-gate">
+  <h2>🎸 Nadzorna plošča</h2>
+  <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="PIN">
+  <button onclick="checkPin()">Vstopi</button>
+  <div id="pin-error"></div>
+</div>
+
+<div class="wrap" id="dashboard" style="display:none;">
+  <header class="top">
+    <h1>🎸 Nadzorna plošča</h1>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a href="pesmarica-viewer.html" target="_blank" class="event-btn" style="text-decoration:none;display:inline-block;">📄 Pesmarica</a>
+      <span class="live-dot"></span><span style="color:var(--muted);font-size:0.8rem;">v živo</span>
+    </div>
+  </header>
+
+  <div class="event-bar">
+    <div>
+      <div class="event-label">Trenutni dogodek</div>
+      <div class="event-name" id="event-name-display">—</div>
+    </div>
+    <button class="event-btn" onclick="openEventEditor()">Spremeni</button>
+  </div>
+  <div class="event-editor" id="event-editor">
+    <input type="text" id="event-input" placeholder="npr. Vitaminček 31.8.">
+    <button class="save-btn" onclick="saveEvent()">Shrani</button>
+    <button class="cancel-btn" onclick="closeEventEditor()">Prekliči</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-req" onclick="switchTab('req')">Zahtevki <span class="badge" id="badge-req" style="display:none;">0</span></div>
+    <div class="tab" id="tab-wish" onclick="switchTab('wish')">Želje <span class="badge" id="badge-wish" style="display:none;">0</span></div>
+    <div class="tab" id="tab-set" onclick="switchTab('set')">Setlista</div>
+    <div class="tab" id="tab-presets" onclick="switchTab('presets')">Predloge</div>
+    <div class="tab" id="tab-stats" onclick="switchTab('stats')">Statistika</div>
+  </div>
+
+  <!-- ZAHTEVKI -->
+  <div class="panel active" id="panel-req">
+    <div id="req-pending"></div>
+
+    <div class="section-label">🔒 Moja banka (vidiš samo ti)</div>
+    <div id="req-bank"></div>
+
+    <div class="section-label">👀 Vidna čakalna vrsta (vidi publika)</div>
+    <div id="req-queue"></div>
+
+    <div class="section-label">🎵 Odigrano nocoj <span id="played-count"></span></div>
+    <div id="req-played"></div>
+
+    <div class="section-label">Zavrnjeno</div>
+    <div id="req-rejected"></div>
+  </div>
+
+  <!-- ŽELJE -->
+  <div class="panel" id="panel-wish">
+    <div id="wish-pending"></div>
+    <div class="section-label">Zgodovina</div>
+    <div id="wish-history"></div>
+  </div>
+
+  <!-- SETLISTA -->
+  <div class="panel" id="panel-set">
+    <div class="search-box">
+      <input type="text" id="set-search" placeholder="Išči po naslovu ali izvajalcu… " oninput="renderSetlist()">
+    </div>
+    <div id="set-results"></div>
+  </div>
+
+  <!-- PREDLOGE (shranjene setliste) -->
+  <div class="panel" id="panel-presets">
+    <div id="preset-list-view">
+      <button class="add-btn" style="width:100%;margin-bottom:14px;padding:13px;" onclick="openPresetEditor(null)">+ Nova setlista</button>
+      <div id="preset-list"></div>
+    </div>
+    <div id="preset-editor-view" style="display:none;">
+      <div class="event-editor" style="display:flex;">
+        <input type="text" id="preset-name-input" placeholder="Ime setliste (npr. Vitaminček)">
+      </div>
+      <div class="search-box">
+        <input type="text" id="preset-search" placeholder="Išči komad za dodajanje…" oninput="renderPresetPicker()">
+      </div>
+      <div class="section-label">Izbrani komadi (povleci za vrstni red)</div>
+      <div id="preset-selected"></div>
+      <div class="section-label">Repertoar</div>
+      <div id="preset-picker"></div>
+      <div class="card" style="display:flex;gap:10px;">
+        <button class="btn-accept" style="flex:1;" onclick="savePresetEditor()">💾 Shrani</button>
+        <button class="btn-alt" style="flex:1;" onclick="closePresetEditor()">Prekliči</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATISTIKA -->
+  <div class="panel" id="panel-stats">
+    <div id="stats-content"><div class="empty-msg">Nalagam statistiko…</div></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="pesmarica-pages.js"></script>
+<script>
+// ============ NASTAVITVE ============
+const SUPABASE_URL = "https://jrmsisnycnqbeahkxyly.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ifjKIvKIlMXRxB2uRN9DwA_GJI7ARZb";
+const ADMIN_PIN = "1234"; // TODO: Rok — zamenjaj s svojim PIN-om
+// =====================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let songsMap = {};
+let ALL_SONGS = [];
+let requests = [];       // all loaded requests
+let wishlist = [];       // all loaded wishlist requests
+let currentQueue = [];   // currently rendered queue order, for reordering
+let CURRENT_EVENT = null;
+
+const CATEGORY_LABELS = {
+  "Angleške": "Angleške / English",
+  "Slovenske": "Slovenske / Slovenian",
+  "Italijanske": "Italijanske / Italian",
+  "Španske": "Španske / Spanish",
+  "Ex-Yu": "Ex-Yu"
+};
+
+function norm(s){
+  return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+}
+
+// ---------- Pesmarica: naslov -> stran v pesmarica.pdf ----------
+function splitPesmaricaRaw(raw){
+  const parts = raw.split(/\s[-–]\s/);
+  if (parts.length >= 2){
+    return { t: norm(parts.slice(0,-1).join(" - ")), a: norm(parts[parts.length-1]) };
+  }
+  return { t: norm(raw), a: "" };
+}
+
+function findPesmaricaPage(title, artist){
+  const t = norm(title);
+  if (!t || !window.PESMARICA_PAGES) return null;
+  const a = norm(artist);
+
+  const parsed = PESMARICA_PAGES.map(e => Object.assign({}, e, splitPesmaricaRaw(e.raw)));
+
+  // 1) Natančno ujemanje naslova (razdvojeno po artistu, če je več zadetkov)
+  const exact = parsed.filter(e => e.t === t);
+  if (exact.length === 1) return exact[0].page;
+  if (exact.length > 1){
+    const byArtist = a && exact.find(e => e.a.includes(a));
+    if (byArtist) return byArtist.page;
+    return exact[0].page;
+  }
+
+  // 2) Ujemanje po celih besedah znotraj celotnega vnosa (rezervna možnost)
+  const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const wordRe = new RegExp("(^|[^a-z0-9čšž])" + escaped + "($|[^a-z0-9čšž])");
+  let candidates = parsed.filter(e => wordRe.test(" " + norm(e.raw) + " "));
+  if (candidates.length){
+    if (a){
+      const byArtist = candidates.find(e => e.a.includes(a));
+      if (byArtist) return byArtist.page;
+    }
+    candidates.sort((x,y)=> x.raw.length - y.raw.length);
+    return candidates[0].page;
+  }
+
+  return null;
+}
+function pesmaricaBtn(title, artist){
+  const page = findPesmaricaPage(title, artist);
+  if (!page) return "";
+  return `<a href="pesmarica-viewer.html?page=${page}" target="_blank" class="lyrics-btn">📄 Besedilo</a>`;
+}
+
+// ---------- PIN gate ----------
+function checkPin(){
+  const val = document.getElementById("pin-input").value;
+  if (val === ADMIN_PIN){
+    localStorage.setItem("admin_authed_kitara", "yes");
+    enterDashboard();
+  } else {
+    document.getElementById("pin-error").textContent = "Napačen PIN.";
+  }
+}
+document.getElementById("pin-input").addEventListener("keydown", e=>{ if(e.key==="Enter") checkPin(); });
+
+function enterDashboard(){
+  document.getElementById("pin-gate").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+  init();
+}
+if (localStorage.getItem("admin_authed_kitara") === "yes"){ enterDashboard(); }
+
+// ---------- Tabs ----------
+const TABS = ['req','wish','set','presets','stats'];
+function switchTab(t){
+  TABS.forEach(name=>{
+    document.getElementById("tab-"+name).classList.toggle("active", t===name);
+    document.getElementById("panel-"+name).classList.toggle("active", t===name);
+  });
+  if (t==="set") renderSetlist();
+  if (t==="presets") renderPresets();
+  if (t==="stats") loadStats(false);
+}
+
+// ---------- Sound + vibration ----------
+function beep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine"; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.35);
+    o.start(); o.stop(ctx.currentTime+0.36);
+  }catch(e){}
+  if (navigator.vibrate) { try{ navigator.vibrate([180,60,180]); }catch(e){} }
+}
+
+function fmtTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString('sl-SI', {hour:'2-digit', minute:'2-digit'});
+}
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+// Doda ali posodobi zahtevek v lokalnem seznamu — prepreči podvajanje,
+// ker Supabase Realtime svojemu lastnemu insertu vrne tudi INSERT dogodek.
+function upsertRequest(row){
+  const idx = requests.findIndex(r=>r.id===row.id);
+  if (idx>-1){
+    requests[idx] = row;
+    return false; // ni nov
+  }
+  requests.unshift(row);
+  return true; // je nov
+}
+
+// ---------- Trenutni dogodek ----------
+async function loadEvent(){
+  const { data } = await sb.from("app_settings").select("current_event").eq("id", true).single();
+  CURRENT_EVENT = data ? data.current_event : null;
+  document.getElementById("event-name-display").textContent = CURRENT_EVENT || "(ni nastavljen — vsi vidijo vso zgodovino)";
+}
+
+function openEventEditor(){
+  document.getElementById("event-input").value = CURRENT_EVENT || "";
+  document.getElementById("event-editor").style.display = "flex";
+  document.getElementById("event-input").focus();
+}
+function closeEventEditor(){
+  document.getElementById("event-editor").style.display = "none";
+}
+async function saveEvent(){
+  const val = document.getElementById("event-input").value.trim();
+  if (!val) return;
+  await sb.from("app_settings").update({ current_event: val }).eq("id", true);
+  CURRENT_EVENT = val;
+  document.getElementById("event-name-display").textContent = val;
+  closeEventEditor();
+  renderRequests(false);
+  renderWishlist(false);
+}
+document.getElementById("event-input") && document.getElementById("event-input").addEventListener("keydown", e=>{ if(e.key==="Enter") saveEvent(); });
+
+// ---------- Init: load songs + data + subscribe realtime ----------
+async function init(){
+  await loadEvent();
+
+  const { data: songs } = await sb.from("songs").select("*").eq("is_active", true).order("position", { ascending:true });
+  ALL_SONGS = songs || [];
+  ALL_SONGS.forEach(s => songsMap[s.id] = s);
+
+  await refreshRequests();
+  await refreshWishlist();
+
+  sb.channel('requests-changes')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'requests' }, payload => {
+      const isNew = upsertRequest(payload.new);
+      renderRequests(isNew);
+      if (isNew) beep();
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'requests' }, payload => {
+      const idx = requests.findIndex(r=>r.id===payload.new.id);
+      if (idx>-1) requests[idx] = payload.new;
+      renderRequests(false);
+    })
+    .subscribe();
+
+  sb.channel('wishlist-changes')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wishlist_requests' }, payload => {
+      wishlist.unshift(payload.new);
+      renderWishlist(true);
+      beep();
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'wishlist_requests' }, payload => {
+      const idx = wishlist.findIndex(r=>r.id===payload.new.id);
+      if (idx>-1) wishlist[idx] = payload.new;
+      renderWishlist(false);
+    })
+    .subscribe();
+}
+
+async function refreshRequests(){
+  const { data } = await sb.from("requests").select("*").order("created_at", { ascending:false }).limit(100);
+  requests = data || [];
+  renderRequests(false);
+}
+async function refreshWishlist(){
+  const { data } = await sb.from("wishlist_requests").select("*").order("created_at", { ascending:false }).limit(100);
+  wishlist = data || [];
+  renderWishlist(false);
+}
+
+// ---------- Render: Requests ----------
+function renderRequests(justArrived){
+  const pending = requests.filter(r=>r.status==="new").sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
+  // Vse za trenutni dogodek, brez omejitve na "zadnjih 30" — aktivni komadi (banka/vrsta)
+  // morajo VEDNO ostati vidni, ne glede na to, koliko drugih zahtevkov je bilo obdelanih tega večera.
+  const eventScoped = requests.filter(r=>r.status!=="new" && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
+
+  const badge = document.getElementById("badge-req");
+  if (pending.length){ badge.style.display="inline-block"; badge.textContent = pending.length; }
+  else { badge.style.display="none"; }
+
+  const pendBox = document.getElementById("req-pending");
+  if (!pending.length){
+    pendBox.innerHTML = '<div class="empty-msg">Trenutno ni novih zahtevkov.</div>';
+  } else {
+    pendBox.innerHTML = pending.map(r=>{
+      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const amt = Number(r.amount)>0 ? `<div class="amount">${Number(r.amount).toFixed(2)} €</div>` : `<div class="amount free">brez plačila</div>`;
+      const lyrBtn = pesmaricaBtn(song.title, song.artist);
+      return `<div class="card new">
+        <div class="row1">
+          <div><div class="song">${escapeHtml(song.title)}</div><div class="artist">${escapeHtml(song.artist)}</div></div>
+          ${amt}
+        </div>
+        <div class="guest">👤 ${escapeHtml(r.guest_name)}</div>
+        ${r.message ? `<div class="msg">"${escapeHtml(r.message)}"</div>` : ``}
+        <div class="time">${fmtTime(r.created_at)}</div>
+        ${lyrBtn ? `<div class="lyrics-row">${lyrBtn}</div>` : ``}
+        <div class="actions">
+          <button class="btn-accept" onclick="confirmRequestIntoBank('${r.id}')">✓ Sprejmi</button>
+          <button class="btn-reject" onclick="setRequestStatus('${r.id}','rejected')">✕ Zavrni</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  const bankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into);
+  const bank = ensureQueueOrder(bankRaw);
+  const queueRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && r.released_to_queue && !r.merged_into);
+  const queue = ensureQueueOrder(queueRaw);
+  // Odigrano/zavrnjeno je čista zgodovina (nič ni na njih treba klikati), zato je varno
+  // omejiti prikaz na zadnjih 30 — aktivnih (banka/vrsta) to nikoli ne prizadene.
+  const played = eventScoped.filter(r=>r.status==="accepted" && r.played_at)
+    .sort((a,b)=> new Date(b.played_at)-new Date(a.played_at))
+    .slice(0,30);
+  const rejected = eventScoped.filter(r=>r.status!=="accepted" && !r.merged_into).slice(0,30);
+
+  document.getElementById("played-count").textContent = played.length ? `(${played.length})` : "";
+
+  currentQueue = queue;
+  const bankBox = document.getElementById("req-bank");
+  if (!bank.length){
+    bankBox.innerHTML = '<div class="empty-msg">Banka je prazna. Dodajaj komade iz zavihka Setlista ali potrjuj želje publike.</div>';
+  } else {
+    bankBox.innerHTML = bank.map((r,i)=>{
+      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const tip = Number(r.amount)>0 ? ` · ${Number(r.amount).toFixed(2)} €` : ``;
+      const lyrBtn = pesmaricaBtn(song.title, song.artist);
+      return `<div class="queue-item" data-id="${r.id}">
+        <div class="drag-handle" aria-label="Primi in premakni">⠿</div>
+        <div class="queue-pos">${i+1}</div>
+        <div class="queue-info">
+          <div class="queue-song">${escapeHtml(song.title)}</div>
+          <div class="queue-artist">${escapeHtml(song.artist)}</div>
+          <div class="queue-guest">👤 ${escapeHtml(r.guest_name)}${tip}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+          ${lyrBtn}
+          <button class="btn-release" onclick="releaseToQueue('${r.id}')">→ V vrsto</button>
+          <button class="btn-remove" onclick="removeFromBank('${r.id}')">🗑 Odstrani</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  initSortableFor("req-bank", reorderList);
+
+  const queueBox = document.getElementById("req-queue");
+  if (!queue.length){
+    queueBox.innerHTML = '<div class="empty-msg">Vidna čakalna vrsta je prazna.</div>';
+  } else {
+    queueBox.innerHTML = queue.map((r,i)=>{
+      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const tip = Number(r.amount)>0 ? ` · ${Number(r.amount).toFixed(2)} €` : ``;
+      const lyrBtn = pesmaricaBtn(song.title, song.artist);
+      return `<div class="queue-item" data-id="${r.id}">
+        <div class="drag-handle" aria-label="Primi in premakni">⠿</div>
+        <div class="queue-pos">${i+1}</div>
+        <div class="queue-info">
+          <div class="queue-song">${escapeHtml(song.title)}</div>
+          <div class="queue-artist">${escapeHtml(song.artist)}</div>
+          <div class="queue-guest">👤 ${escapeHtml(r.guest_name)}${tip}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+          ${lyrBtn}
+          <button class="btn-play" onclick="markPlayed('${r.id}')">▶ Odigrano</button>
+          <button class="btn-alt" onclick="pullBackToBank('${r.id}')">← Nazaj v banko</button>
+          <button class="btn-remove" onclick="removeFromQueue('${r.id}')">🗑 Odstrani</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  initSortableFor("req-queue", reorderList);
+
+  const playedBox = document.getElementById("req-played");
+  if (!played.length){
+    playedBox.innerHTML = '<div class="empty-msg">Še nič odigranega nocoj.</div>';
+  } else {
+    playedBox.innerHTML = played.map(r=>{
+      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      return `<div class="queue-item played">
+        <div class="queue-info">
+          <div class="queue-song">${escapeHtml(song.title)}</div>
+          <div class="queue-artist">${escapeHtml(song.artist)}</div>
+          <div class="queue-guest">👤 ${escapeHtml(r.guest_name)} · ${fmtTime(r.played_at)}</div>
+        </div>
+        <div class="played-tag">🎵</div>
+      </div>`;
+    }).join("");
+  }
+
+  const rejBox = document.getElementById("req-rejected");
+  if (!rejected.length){
+    rejBox.innerHTML = '<div class="empty-msg">Ni zavrnjenih zahtevkov.</div>';
+  } else {
+    rejBox.innerHTML = rejected.map(r=>{
+      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      return `<div class="rej-item">
+        <div class="song">${escapeHtml(song.title)}</div>
+        <div class="artist">${escapeHtml(song.artist)} · 👤 ${escapeHtml(r.guest_name)}</div>
+      </div>`;
+    }).join("");
+  }
+
+  renderSetlist();
+}
+
+async function setRequestStatus(id, status){
+  requests = requests.map(r => r.id===id ? {...r, status} : r);
+  renderRequests(false);
+  await sb.from("requests").update({ status }).eq("id", id);
+}
+
+// Potrdi dohodno željo v zasebno banko (SPREMEMBA 3, stanje 2).
+// Če je isti komad že aktiven (v banki ali v vidni vrsti) ZNOTRAJ TRENUTNEGA DOGODKA,
+// se avtomatsko združi vanj namesto da naredi podvojen vnos (SPREMEMBA 6) — gost, ki je
+// prosil, dobi zasluge (ime se prenese na obstoječi vnos). Namenoma NE gleda čez druge/stare
+// dogodke — sicer bi se novo potrjena želja lahko "izgubila" z združitvijo v pozabljen star vnos.
+async function confirmRequestIntoBank(id){
+  const req = requests.find(r=>r.id===id);
+  if (!req) return;
+  const dup = requests.find(r=> r.id!==id && r.song_id===req.song_id && r.status==="accepted" && !r.played_at && !r.merged_into && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
+  if (dup){
+    const mergedName = (dup.guest_name === "Rok (sam izbral)") ? req.guest_name : `${dup.guest_name} + ${req.guest_name}`;
+    requests = requests.map(r=>{
+      if (r.id===dup.id) return {...r, guest_name: mergedName};
+      if (r.id===id) return {...r, status:"rejected", merged_into: dup.id};
+      return r;
+    });
+    renderRequests(false);
+    const res1 = await sb.from("requests").update({ guest_name: mergedName }).eq("id", dup.id);
+    const res2 = await sb.from("requests").update({ status:"rejected", merged_into: dup.id }).eq("id", id);
+    const err = (res1 && res1.error) || (res2 && res2.error);
+    if (err){ console.error(err); alert("Potrditev ni bila shranjena v bazo: " + (err.message || JSON.stringify(err))); }
+    return;
+  }
+  const updates = { status:"accepted", released_to_queue:false, queue_order: nextBankOrder() };
+  requests = requests.map(r => r.id===id ? {...r, ...updates} : r);
+  renderRequests(false);
+  const res = await sb.from("requests").update(updates).eq("id", id);
+  if (res && res.error){ console.error(res.error); alert("Potrditev ni bila shranjena v bazo: " + (res.error.message || JSON.stringify(res.error))); }
+}
+
+// Pošlji komad iz banke v vidno čakalno vrsto (SPREMEMBA 3, stanje 3).
+async function releaseToQueue(id){
+  const updates = { released_to_queue:true, queue_order: nextQueueOrder() };
+  requests = requests.map(r => r.id===id ? {...r, ...updates} : r);
+  renderRequests(false);
+  const res = await sb.from("requests").update(updates).eq("id", id);
+  if (res && res.error){ console.error(res.error); alert("Ni bilo shranjeno v bazo: " + (res.error.message || JSON.stringify(res.error))); }
+}
+
+// Umakni komad nazaj iz vidne vrste v zasebno banko (premislil si).
+async function pullBackToBank(id){
+  const updates = { released_to_queue:false, queue_order: nextBankOrder() };
+  requests = requests.map(r => r.id===id ? {...r, ...updates} : r);
+  renderRequests(false);
+  const res = await sb.from("requests").update(updates).eq("id", id);
+  if (res && res.error){ console.error(res.error); alert("Ni bilo shranjeno v bazo: " + (res.error.message || JSON.stringify(res.error))); }
+}
+
+// Skupna logika za "odstrani" (mehki izbris prek statusa, brez potrebe po DELETE pravicah).
+async function removeRequestCore(id, confirmMsg){
+  if (!confirm(confirmMsg)) return;
+  requests = requests.map(r => r.id===id ? {...r, status:"rejected"} : r);
+  renderRequests(false);
+  const res = await sb.from("requests").update({ status: "rejected" }).eq("id", id);
+  if (res && res.error){ console.error(res.error); alert("Ni bilo shranjeno v bazo: " + (res.error.message || JSON.stringify(res.error))); }
+}
+function removeFromBank(id){ return removeRequestCore(id, "Odstrani komad iz banke?"); }
+
+// "Odigrano" komad odstrani iz VSEH seznamov hkrati (SPREMEMBA 5): če obstaja
+// še kak drug aktiven (nepredvajan) vnos za isti komad ZNOTRAJ TRENUTNEGA DOGODKA
+// (npr. dvojnik, ki se ni ujel z združevanjem), se tudi ta počisti, da se komad ne igra dvakrat.
+async function markPlayed(id){
+  const now = new Date().toISOString();
+  const primary = requests.find(r=>r.id===id);
+  const songId = primary ? primary.song_id : null;
+  const dupIds = songId!=null
+    ? requests.filter(r=> r.id!==id && r.song_id===songId && r.status==="accepted" && !r.played_at && !r.merged_into && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT)).map(r=>r.id)
+    : [];
+  requests = requests.map(r=>{
+    if (r.id===id) return {...r, played_at: now};
+    if (dupIds.includes(r.id)) return {...r, status:"rejected"};
+    return r;
+  });
+  renderRequests(false);
+  const res = await sb.from("requests").update({ played_at: now }).eq("id", id);
+  if (res && res.error){ console.error(res.error); alert("Ni bilo shranjeno v bazo: " + (res.error.message || JSON.stringify(res.error))); }
+  for (const did of dupIds){
+    await sb.from("requests").update({ status:"rejected" }).eq("id", did);
+  }
+}
+
+// ---------- Ročno preurejanje vrstnega reda v čakalni vrsti (queue_order) ----------
+
+// Poskrbi, da ima vsak zahtevek v čakalni vrsti nastavljen queue_order.
+// Starejši zapisi (ali prvi zagon po dodani koloni) dobijo zaporedno številko
+// glede na created_at, kar ohrani obstoječi vrstni red.
+function ensureQueueOrder(queueRaw){
+  const sorted = [...queueRaw].sort((a,b)=>{
+    if (a.queue_order!=null && b.queue_order!=null) return a.queue_order-b.queue_order;
+    if (a.queue_order!=null) return -1;
+    if (b.queue_order!=null) return 1;
+    return new Date(a.created_at)-new Date(b.created_at);
+  });
+  let maxOrder = sorted.reduce((m,r)=> r.queue_order!=null ? Math.max(m,r.queue_order) : m, 0);
+  sorted.forEach(r=>{
+    if (r.queue_order==null){
+      maxOrder += 1;
+      r.queue_order = maxOrder;
+      sb.from("requests").update({ queue_order: maxOrder }).eq("id", r.id);
+    }
+  });
+  return sorted;
+}
+
+// queue_order se uporablja generično kot "pozicija znotraj trenutnega seznama"
+// — isti stolpec služi tako banki kot vidni vrsti, saj je vsak vnos vedno samo
+// v enem od njiju hkrati.
+function nextOrderFor(filterFn){
+  let max = 0;
+  requests.forEach(r=>{ if (filterFn(r) && r.queue_order!=null) max = Math.max(max, r.queue_order); });
+  return max + 1;
+}
+function nextBankOrder(){
+  return nextOrderFor(r=> r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into);
+}
+function nextQueueOrder(){
+  return nextOrderFor(r=> r.status==="accepted" && !r.played_at && r.released_to_queue && !r.merged_into);
+}
+
+// SortableJS: primi-in-povleci preurejanje (uporablja se za banko in vidno vrsto)
+function initSortableFor(elId, onReorder){
+  const el = document.getElementById(elId);
+  if (!el || typeof Sortable === "undefined" || el._sortableInstance) return;
+  el._sortableInstance = Sortable.create(el, {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: function(){
+      const ids = Array.from(el.children).map(ch => ch.dataset.id).filter(Boolean);
+      onReorder(ids);
+    }
+  });
+}
+
+async function reorderList(ids){
+  const changes = [];
+  ids.forEach((id, i)=>{
+    const order = i+1;
+    const r = requests.find(x=>x.id===id);
+    if (r && r.queue_order !== order){
+      r.queue_order = order;
+      changes.push({ id, order });
+    }
+  });
+  renderRequests(false);
+  for (const c of changes){
+    await sb.from("requests").update({ queue_order: c.order }).eq("id", c.id);
+  }
+}
+
+// Odstrani komad iz vidne vrste brez oznake "odigrano" (npr. pomotoma dodan komad)
+async function removeFromQueue(id){
+  return removeRequestCore(id, "Odstrani komad iz čakalne vrste?");
+}
+
+// ---------- Render: Setlista ----------
+function renderSetlist(){
+  const box = document.getElementById("set-results");
+  if (!box) return;
+  const q = norm(document.getElementById("set-search").value);
+  const filtered = ALL_SONGS.filter(s => !q || norm(s.title).includes(q) || norm(s.artist).includes(q));
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty-msg">Ni najdenih komadov.</div>';
+    return;
+  }
+  let html = "";
+  let lastCat = null;
+  filtered.forEach(s=>{
+    if (s.category !== lastCat){
+      html += `<div class="song-cat">${escapeHtml(CATEGORY_LABELS[s.category] || s.category)}</div>`;
+      lastCat = s.category;
+    }
+    const active = requests.find(r=>r.song_id===s.id && r.status==="accepted" && !r.played_at && !r.merged_into && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
+    const playedTonight = requests.some(r=>r.song_id===s.id && r.status==="accepted" && r.played_at && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT));
+    const lyrBtn = pesmaricaBtn(s.title, s.artist);
+    let right;
+    if (active){
+      right = active.released_to_queue
+        ? '<span class="song-badge badge-queued">V vrsti</span>'
+        : '<span class="song-badge badge-bank">V banki</span>';
+    } else {
+      right = `${playedTonight ? '<span class="song-badge badge-played">Odigrano</span>' : ''}<button class="add-btn" onclick="addToBank(${s.id})">+ V banko</button>`;
+    }
+    html += `<div class="song-item">
+      <div><div class="title">${escapeHtml(s.title)}</div><div class="artist">${escapeHtml(s.artist)}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">${lyrBtn}${right}</div>
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+
+// Doda komad iz repertoarja neposredno v zasebno banko (ne v vidno vrsto —
+// to Rok naredi zavestno kasneje z "→ V vrsto").
+async function addToBank(songId){
+  const payload = {
+    song_id: songId,
+    guest_name: "Rok (sam izbral)",
+    amount: 0,
+    message: null,
+    status: "accepted",
+    played_at: null,
+    released_to_queue: false,
+    event_name: CURRENT_EVENT,
+    queue_order: nextBankOrder()
+  };
+  const { data, error } = await sb.from("requests").insert(payload).select().single();
+  if (error){ console.error(error); return; }
+  upsertRequest(data);
+  renderRequests(false);
+}
+
+// ---------- Render: Wishlist ----------
+function renderWishlist(justArrived){
+  const pending = wishlist.filter(r=>r.status==="new").sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
+  const history = wishlist.filter(r=>r.status!=="new" && (!CURRENT_EVENT || r.event_name===CURRENT_EVENT)).slice(0,30);
+
+  const badge = document.getElementById("badge-wish");
+  if (pending.length){ badge.style.display="inline-block"; badge.textContent = pending.length; }
+  else { badge.style.display="none"; }
+
+  const pendBox = document.getElementById("wish-pending");
+  if (!pending.length){
+    pendBox.innerHTML = '<div class="empty-msg">Trenutno ni novih želja.</div>';
+  } else {
+    pendBox.innerHTML = pending.map(r=>{
+      return `<div class="card new">
+        <div class="row1">
+          <div><div class="song">${escapeHtml(r.title)}</div><div class="artist">${escapeHtml(r.artist)}</div></div>
+        </div>
+        ${r.guest_name ? `<div class="guest">👤 ${escapeHtml(r.guest_name)}</div>` : ``}
+        ${r.message ? `<div class="msg">"${escapeHtml(r.message)}"</div>` : ``}
+        <div class="time">${fmtTime(r.created_at)}</div>
+        <div class="actions">
+          <button class="btn-accept" onclick="setWishlistStatus('${r.id}','playing_today')">🎤 Igram danes</button>
+          <button class="btn-alt" onclick="setWishlistStatus('${r.id}','next_time')">📝 Naslednjič</button>
+          <button class="btn-reject" onclick="setWishlistStatus('${r.id}','declined')">✕</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  const histBox = document.getElementById("wish-history");
+  if (!history.length){
+    histBox.innerHTML = '<div class="empty-msg">Še ni zgodovine.</div>';
+  } else {
+    const labels = {playing_today:"Igram danes", next_time:"Naslednjič", declined:"Zavrnjeno"};
+    histBox.innerHTML = history.map(r=>{
+      return `<div class="card">
+        <div class="row1">
+          <div><div class="song">${escapeHtml(r.title)}</div><div class="artist">${escapeHtml(r.artist)}</div></div>
+        </div>
+        ${r.guest_name ? `<div class="guest">👤 ${escapeHtml(r.guest_name)}</div>` : ``}
+        <div class="time">${fmtTime(r.created_at)}</div>
+        <span class="status-pill status-${r.status}">${labels[r.status]||r.status}</span>
+      </div>`;
+    }).join("");
+  }
+}
+
+async function setWishlistStatus(id, status){
+  wishlist = wishlist.map(r => r.id===id ? {...r, status} : r);
+  renderWishlist(false);
+  await sb.from("wishlist_requests").update({ status }).eq("id", id);
+}
+
+// ---------- Predloge (shranjene setliste / presets) ----------
+let PRESETS = [];
+let PRESET_EDIT_ID = null;       // null = ustvarjam novo predlogo
+let PRESET_EDIT_SONG_IDS = [];   // delovni seznam id-jev komadov med urejanjem
+
+async function loadPresets(){
+  const { data, error } = await sb.from("setlist_presets").select("*").order("created_at", { ascending:true });
+  if (error){ console.error(error); PRESETS = []; return; }
+  PRESETS = data || [];
+}
+
+async function renderPresets(){
+  const box = document.getElementById("preset-list");
+  box.innerHTML = '<div class="empty-msg">Nalagam…</div>';
+  await loadPresets();
+  if (!PRESETS.length){
+    box.innerHTML = '<div class="empty-msg">Še ni shranjenih setlist. Ustvari prvo zgoraj.</div>';
+    return;
+  }
+  box.innerHTML = PRESETS.map(p=>{
+    const n = (p.song_ids||[]).length;
+    return `<div class="preset-card">
+      <div class="preset-name">${escapeHtml(p.name)}</div>
+      <div class="preset-sub">${n} komad${n===1?'':(n>=2&&n<=4?'i':'ov')}</div>
+      <div class="preset-actions">
+        <button class="btn-accept" onclick="loadPresetAsActive('${p.id}')">▶ Naloži</button>
+        <button class="btn-alt" onclick="openPresetEditor('${p.id}')">✏ Uredi</button>
+        <button class="btn-alt" onclick="duplicatePreset('${p.id}')">⧉ Podvoji</button>
+        <button class="btn-reject" onclick="deletePreset('${p.id}')">🗑 Izbriši</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function openPresetEditor(id){
+  PRESET_EDIT_ID = id;
+  const p = id ? PRESETS.find(x=>x.id===id) : null;
+  PRESET_EDIT_SONG_IDS = p ? [...p.song_ids] : [];
+  document.getElementById("preset-name-input").value = p ? p.name : "";
+  document.getElementById("preset-search").value = "";
+  document.getElementById("preset-list-view").style.display = "none";
+  document.getElementById("preset-editor-view").style.display = "block";
+  renderPresetSelected();
+  renderPresetPicker();
+}
+function closePresetEditor(){
+  document.getElementById("preset-editor-view").style.display = "none";
+  document.getElementById("preset-list-view").style.display = "block";
+  PRESET_EDIT_ID = null;
+  PRESET_EDIT_SONG_IDS = [];
+}
+
+function renderPresetSelected(){
+  const box = document.getElementById("preset-selected");
+  if (!PRESET_EDIT_SONG_IDS.length){
+    box.innerHTML = '<div class="empty-msg">Ni še dodanih komadov.</div>';
+  } else {
+    box.innerHTML = PRESET_EDIT_SONG_IDS.map((sid,i)=>{
+      const s = songsMap[sid] || {title:"(neznan komad)", artist:""};
+      return `<div class="queue-item" data-id="${sid}">
+        <div class="drag-handle" aria-label="Primi in premakni">⠿</div>
+        <div class="queue-pos">${i+1}</div>
+        <div class="queue-info">
+          <div class="queue-song">${escapeHtml(s.title)}</div>
+          <div class="queue-artist">${escapeHtml(s.artist)}</div>
+        </div>
+        <button class="btn-remove" onclick="removeFromPresetEdit(${sid})">🗑</button>
+      </div>`;
+    }).join("");
+  }
+  initSortableFor("preset-selected", reorderPresetEdit);
+}
+
+function reorderPresetEdit(ids){
+  PRESET_EDIT_SONG_IDS = ids.map(id => Number(id));
+  renderPresetSelected();
+}
+
+function renderPresetPicker(){
+  const box = document.getElementById("preset-picker");
+  const q = norm(document.getElementById("preset-search").value);
+  const filtered = ALL_SONGS.filter(s => !q || norm(s.title).includes(q) || norm(s.artist).includes(q));
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty-msg">Ni najdenih komadov.</div>';
+    return;
+  }
+  let html = "";
+  let lastCat = null;
+  filtered.forEach(s=>{
+    if (s.category !== lastCat){
+      html += `<div class="song-cat">${escapeHtml(CATEGORY_LABELS[s.category] || s.category)}</div>`;
+      lastCat = s.category;
+    }
+    const already = PRESET_EDIT_SONG_IDS.includes(s.id);
+    html += `<div class="song-item">
+      <div><div class="title">${escapeHtml(s.title)}</div><div class="artist">${escapeHtml(s.artist)}</div></div>
+      ${already ? '<span class="song-badge badge-bank">Dodano</span>' : `<button class="add-btn" onclick="addToPresetEdit(${s.id})">+ Dodaj</button>`}
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+
+function addToPresetEdit(songId){
+  if (!PRESET_EDIT_SONG_IDS.includes(songId)) PRESET_EDIT_SONG_IDS.push(songId);
+  renderPresetSelected();
+  renderPresetPicker();
+}
+function removeFromPresetEdit(songId){
+  PRESET_EDIT_SONG_IDS = PRESET_EDIT_SONG_IDS.filter(id=>id!==songId);
+  renderPresetSelected();
+  renderPresetPicker();
+}
+
+async function savePresetEditor(){
+  const name = document.getElementById("preset-name-input").value.trim();
+  if (!name){ alert("Vpiši ime setliste."); return; }
+  if (!PRESET_EDIT_SONG_IDS.length){ alert("Dodaj vsaj en komad."); return; }
+  if (PRESET_EDIT_ID){
+    await sb.from("setlist_presets").update({ name, song_ids: PRESET_EDIT_SONG_IDS }).eq("id", PRESET_EDIT_ID);
+  } else {
+    await sb.from("setlist_presets").insert({ name, song_ids: PRESET_EDIT_SONG_IDS });
+  }
+  closePresetEditor();
+  renderPresets();
+}
+
+async function duplicatePreset(id){
+  const p = PRESETS.find(x=>x.id===id);
+  if (!p) return;
+  await sb.from("setlist_presets").insert({ name: p.name + " (kopija)", song_ids: [...p.song_ids] });
+  renderPresets();
+}
+
+async function deletePreset(id){
+  const p = PRESETS.find(x=>x.id===id);
+  if (!p) return;
+  if (!confirm(`Izbriši setlisto "${p.name}"?`)) return;
+  await sb.from("setlist_presets").delete().eq("id", id);
+  renderPresets();
+}
+
+// Naloži prednastavitev kot aktivno banko — v CELOTI zamenja trenutno banko
+// (vse, kar je trenutno v banki in še ni izdano v vidno vrsto, se zavrne).
+// Že izdana vidna vrsta ostane nedotaknjena.
+async function loadPresetAsActive(id){
+  const p = PRESETS.find(x=>x.id===id);
+  if (!p) return;
+  if (!confirm(`Naloži "${p.name}" kot aktivno banko?\n\nTo bo zamenjalo vse, kar je trenutno v tvoji banki (še ne izdano v vidno vrsto). Vidna čakalna vrsta ostane nedotaknjena.`)) return;
+
+  const currentBank = requests.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into);
+  for (const r of currentBank){
+    requests = requests.map(x=> x.id===r.id ? {...x, status:"rejected"} : x);
+    await sb.from("requests").update({ status:"rejected" }).eq("id", r.id);
+  }
+
+  let order = 0;
+  for (const songId of p.song_ids){
+    order += 1;
+    const payload = {
+      song_id: songId, guest_name: "Rok (sam izbral)", amount: 0, message: null,
+      status: "accepted", played_at: null, released_to_queue: false,
+      event_name: CURRENT_EVENT, queue_order: order
+    };
+    const { data, error } = await sb.from("requests").insert(payload).select().single();
+    if (!error && data) upsertRequest(data);
+  }
+  renderRequests(false);
+  switchTab('req');
+}
+
+// ---------- Statistika (odigrani komadi po koncertih) ----------
+// Naloži se samo, ko odpreš zavihek — ne teče v ozadju in ne vpliva
+// na odzivnost aplikacije med nastopom.
+let STATS_LOADED = false;
+let STATS_EVENT_REALNAMES = []; // index -> pravo ime dogodka (lahko null), za brisanje
+
+async function loadStats(force){
+  if (STATS_LOADED && !force) return;
+  const box = document.getElementById("stats-content");
+  box.innerHTML = '<div class="empty-msg">Nalagam statistiko…</div>';
+
+  const [playedReqRes, playedWishRes] = await Promise.all([
+    sb.from("requests").select("*").eq("status","accepted").not("played_at","is",null).order("played_at",{ ascending:false }).limit(5000),
+    sb.from("wishlist_requests").select("*").eq("status","playing_today").order("created_at",{ ascending:false }).limit(5000)
+  ]);
+
+  renderStats(playedReqRes.data || [], playedWishRes.data || []);
+  STATS_LOADED = true;
+}
+
+function renderStats(playedReq, playedWish){
+  const box = document.getElementById("stats-content");
+  if (!playedReq.length && !playedWish.length){
+    box.innerHTML = '<div class="empty-msg">Še ni zgodovine odigranih komadov.</div>';
+    return;
+  }
+
+  // Razvrsti po dogodku (koncertu)
+  const events = {};
+  function bucket(name){
+    const key = name || "(brez imena dogodka)";
+    if (!events[key]) events[key] = { reqs:[], wish:[], latest:0, realName: name || null };
+    return events[key];
+  }
+  playedReq.forEach(r=>{
+    const b = bucket(r.event_name);
+    b.reqs.push(r);
+    const t = new Date(r.played_at).getTime();
+    if (t > b.latest) b.latest = t;
+  });
+  playedWish.forEach(r=>{
+    const b = bucket(r.event_name);
+    b.wish.push(r);
+    const t = new Date(r.created_at).getTime();
+    if (t > b.latest) b.latest = t;
+  });
+  const eventNames = Object.keys(events).sort((a,b)=> events[b].latest - events[a].latest);
+
+  // Skupno najbolj igrani komadi (vsi dogodki skupaj)
+  const songCounts = {};
+  playedReq.forEach(r=>{
+    const song = songsMap[r.song_id];
+    const key = song ? (song.title + " — " + song.artist) : "(neznan komad)";
+    songCounts[key] = (songCounts[key]||0) + 1;
+  });
+  const topSongs = Object.entries(songCounts).sort((a,b)=> b[1]-a[1]).slice(0,10);
+
+  let html = `<button class="stats-refresh" onclick="loadStats(true)">↻ Osveži statistiko</button>`;
+
+  if (topSongs.length){
+    html += `<div class="stats-event">
+      <div class="stats-event-title">🏆 Skupno najbolj igrani</div>
+      <div class="stats-event-sub">Vsi dogodki skupaj</div>`;
+    topSongs.forEach(([label,count])=>{
+      const [title, artist] = label.split(" — ");
+      html += `<div class="stats-top">
+        <div><div class="stats-song-title">${escapeHtml(title)}</div>${artist ? `<div class="stats-song-artist">${escapeHtml(artist)}</div>` : ``}</div>
+        <div class="stats-count">${count}×</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  STATS_EVENT_REALNAMES = [];
+  eventNames.forEach((name, idx)=>{
+    const b = events[name];
+    STATS_EVENT_REALNAMES[idx] = b.realName;
+    const dateStr = b.latest ? new Date(b.latest).toLocaleDateString('sl-SI', {day:'numeric', month:'long', year:'numeric'}) : "";
+    html += `<div class="stats-event">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div>
+          <div class="stats-event-title">${escapeHtml(name)}</div>
+          <div class="stats-event-sub">${dateStr}${b.reqs.length ? ` · ${b.reqs.length} odigranih` : ``}${b.wish.length ? ` · ${b.wish.length} glasbenih želja` : ``}</div>
+        </div>
+        <button class="btn-remove" onclick="deleteStatsEvent(${idx})">🗑 Izbriši dogodek</button>
+      </div>`;
+
+    if (b.reqs.length){
+      html += `<div class="stats-sub-label">🎵 Odigrano</div>`;
+      b.reqs.sort((x,y)=> new Date(x.played_at)-new Date(y.played_at)).forEach(r=>{
+        const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+        html += `<div class="stats-song-row">
+          <div><div class="stats-song-title">${escapeHtml(song.title)}</div><div class="stats-song-artist">${escapeHtml(song.artist)} · 👤 ${escapeHtml(r.guest_name)}</div></div>
+          <div class="stats-count">${fmtTime(r.played_at)}</div>
+        </div>`;
+      });
+    }
+
+    if (b.wish.length){
+      html += `<div class="stats-sub-label">⭐ Glasbene želje (odigrane)</div>`;
+      b.wish.sort((x,y)=> new Date(x.created_at)-new Date(y.created_at)).forEach(r=>{
+        html += `<div class="stats-song-row">
+          <div><div class="stats-song-title">${escapeHtml(r.title)}</div><div class="stats-song-artist">${escapeHtml(r.artist)}${r.guest_name ? ` · 👤 ${escapeHtml(r.guest_name)}` : ``}</div></div>
+        </div>`;
+      });
+    }
+
+    html += `</div>`;
+  });
+
+  box.innerHTML = html;
+}
+
+// Izbriše VSE podatke (zahtevke + glasbene želje) za en dogodek — za čiščenje testnih vnosov.
+async function deleteStatsEvent(idx){
+  const realName = STATS_EVENT_REALNAMES[idx];
+  const label = realName || "(brez imena dogodka)";
+  if (!confirm(`Izbrišem VSE podatke (zahtevke in glasbene želje) za dogodek "${label}"?\n\nTega ni mogoče razveljaviti.`)) return;
+
+  let res1, res2;
+  try{
+    if (realName == null){
+      res1 = await sb.from("requests").delete().is("event_name", null);
+      res2 = await sb.from("wishlist_requests").delete().is("event_name", null);
+    } else {
+      res1 = await sb.from("requests").delete().eq("event_name", realName);
+      res2 = await sb.from("wishlist_requests").delete().eq("event_name", realName);
+    }
+  }catch(e){
+    console.error(e);
+    alert("Brisanje ni uspelo (napaka pri povezavi): " + (e && e.message ? e.message : e));
+    return;
+  }
+
+  const err = (res1 && res1.error) || (res2 && res2.error);
+  if (err){
+    console.error(err);
+    alert("Brisanje ni uspelo: " + (err.message || JSON.stringify(err)) + "\n\nNajverjetneje v Supabase manjka dovoljenje za brisanje (RLS pravilo) za te tabele.");
+    return;
+  }
+
+  requests = requests.filter(r => (r.event_name ?? null) !== (realName ?? null));
+  wishlist = wishlist.filter(r => (r.event_name ?? null) !== (realName ?? null));
+  renderRequests(false);
+  renderWishlist(false);
+  loadStats(true);
+}
+</script>
+</body>
+</html>
