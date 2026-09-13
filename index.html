@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Rok Morgan — Zahtevki / Requests</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121212; --bg2:#1b1b1b; --card:#1f1f1f; --text:#f3efe7; --muted:#a8a29a;
+    --gold:#e0b84c; --gold-dim:#8a713a; --danger:#e05a4c; --ok:#4caf7d;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
+  body{min-height:100vh;display:flex;flex-direction:column;}
+  h1,h2,h3{font-family:'Fraunces',serif;margin:0;}
+  .wrap{max-width:520px;margin:0 auto;width:100%;padding:20px 18px 40px;flex:1;display:flex;flex-direction:column;}
+  header.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:22px 0 8px;}
+  header.top h1{font-size:1.4rem;color:var(--gold);text-align:center;}
+  .subtitle{text-align:center;color:var(--muted);font-size:0.92rem;margin-top:2px;margin-bottom:18px;}
+  .view{display:none;flex-direction:column;gap:14px;animation:fade .25s ease;}
+  .view.active{display:flex;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  .big-btn{background:var(--card);border:1px solid #2c2c2c;border-radius:var(--radius);padding:22px 18px;color:var(--text);font-size:1.05rem;font-weight:600;text-align:left;display:flex;align-items:center;gap:14px;cursor:pointer;}
+  .big-btn .emoji{font-size:1.6rem;}
+  .big-btn:active{background:#262626;}
+  .big-btn small{display:block;color:var(--muted);font-weight:400;font-size:0.82rem;margin-top:3px;}
+
+  input[type=text], input[type=number], textarea{
+    width:100%;background:var(--bg2);border:1px solid #333;border-radius:12px;padding:13px 14px;color:var(--text);font-size:1rem;font-family:inherit;
+  }
+  input::placeholder, textarea::placeholder{color:#7a756c;}
+  label{font-size:0.85rem;color:var(--muted);margin-bottom:6px;display:block;}
+  .field{margin-bottom:2px;}
+
+  .search-box{position:sticky;top:0;background:var(--bg);padding-bottom:10px;z-index:5;}
+  .song-cat{color:var(--gold);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 6px;font-weight:700;}
+  .song-item{background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .song-item:active{background:#262626;}
+  .song-item .title{font-weight:600;}
+  .song-item .artist{color:var(--muted);font-size:0.85rem;}
+  .song-item .arrow{color:var(--gold);font-size:1.2rem;}
+  .song-badge{display:inline-block;font-size:0.68rem;font-weight:700;border-radius:8px;padding:3px 8px;white-space:nowrap;margin-right:4px;}
+  .badge-queued{background:#2a2a1c;color:var(--gold);}
+  .badge-played{background:#1c2a3a;color:#6ab0e0;}
+  .empty-msg{color:var(--muted);text-align:center;padding:30px 0;font-size:0.9rem;}
+
+  .back{color:var(--muted);background:none;border:none;font-size:0.9rem;padding:6px 0;text-align:left;cursor:pointer;width:fit-content;}
+  .selected-song{background:linear-gradient(135deg,#242018,#1c1c1c);border:1px solid var(--gold-dim);border-radius:var(--radius);padding:16px;}
+  .selected-song .cat{color:var(--gold);font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;}
+  .selected-song .t{font-family:'Fraunces',serif;font-size:1.25rem;margin-top:2px;}
+  .selected-song .a{color:var(--muted);}
+
+  .amount-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .amount-btn{background:var(--bg2);border:1px solid #333;border-radius:12px;padding:14px 8px;text-align:center;color:var(--text);font-weight:600;cursor:pointer;font-size:1rem;}
+  .amount-btn.selected{background:var(--gold);color:#1a1608;border-color:var(--gold);}
+  .amount-btn.wide{grid-column:span 3;}
+
+  .submit-btn{background:var(--gold);color:#1a1608;border:none;border-radius:14px;padding:16px;font-size:1.05rem;font-weight:700;cursor:pointer;margin-top:6px;}
+  .submit-btn:disabled{opacity:0.45;}
+  .submit-btn.secondary{background:var(--card);color:var(--text);border:1px solid #333;}
+
+  .confirm-box{text-align:center;padding:30px 10px;}
+  .confirm-box .big-emoji{font-size:3rem;margin-bottom:8px;}
+  .confirm-box h2{color:var(--gold);margin-bottom:6px;}
+  .confirm-box p{color:var(--muted);margin:4px 0 22px;}
+  .revolut-btn{display:inline-block;background:#000AFF;color:#fff;border-radius:14px;padding:16px 22px;font-weight:700;text-decoration:none;font-size:1rem;}
+  .hint{color:var(--muted);font-size:0.8rem;margin-top:10px;}
+  .tipbox-btn{display:block;background:var(--gold);color:#1a1608;border-radius:14px;padding:16px 22px;font-weight:700;font-size:1rem;margin-top:14px;text-align:center;cursor:pointer;}
+  .tipbox-btn.acked{background:var(--card);color:var(--gold);border:1px solid var(--gold);cursor:default;}
+  .footer-note{text-align:center;color:#5c5850;font-size:0.75rem;margin-top:auto;padding-top:24px;}
+  .error-msg{color:var(--danger);font-size:0.85rem;}
+
+  .contact-card{text-align:center;padding:8px;}
+  .contact-card .name{font-family:'Fraunces',serif;font-size:1.6rem;color:var(--gold);}
+  .contact-card .role{color:var(--muted);margin-top:2px;margin-bottom:22px;}
+  .contact-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:15px 16px;margin-bottom:10px;text-decoration:none;color:var(--text);text-align:left;}
+  .contact-row .ic{font-size:1.3rem;}
+  .contact-row .lbl{font-size:0.75rem;color:var(--muted);}
+  .contact-row .val{font-weight:600;}
+
+  .queue-item{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid #2a2a2a;border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+  .queue-item.mine{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+  .queue-pos{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:#241f0f;color:var(--gold);font-weight:700;font-size:0.95rem;display:flex;align-items:center;justify-content:center;}
+  .queue-info{flex:1;}
+  .queue-song{font-weight:600;}
+  .queue-artist{color:var(--muted);font-size:0.85rem;}
+  .queue-guest{color:var(--muted);font-size:0.8rem;margin-top:2px;}
+  .queue-you{background:var(--gold);color:#1a1608;font-size:0.68rem;font-weight:700;border-radius:8px;padding:4px 8px;text-align:center;line-height:1.3;white-space:nowrap;}
+  .queue-item.played{opacity:0.85;}
+  .played-tag{background:#1c2a3a;color:#6ab0e0;font-size:1.1rem;border-radius:8px;padding:4px 10px;}
+  .section-label{color:var(--muted);font-size:0.78rem;letter-spacing:.08em;text-transform:uppercase;margin:22px 0 8px;font-weight:700;}
+
+  .my-status{border-radius:var(--radius);padding:14px 16px;margin-bottom:4px;border:1px solid #2c2c2c;background:var(--card);}
+  .my-status .my-status-label{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+  .my-status .my-status-song{font-family:'Fraunces',serif;font-size:1.05rem;}
+  .my-status .my-status-state{font-weight:700;margin-top:4px;}
+  .my-status.pending{border-color:#3a3320;}
+  .my-status.pending .my-status-state{color:var(--gold);}
+  .my-status.accepted{border-color:#2a3a2c;}
+  .my-status.accepted .my-status-state{color:var(--ok);}
+  .my-status.queued{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+  .my-status.queued .my-status-state{color:var(--gold);}
+  .my-status.played{border-color:#1c2a3a;}
+  .my-status.played .my-status-state{color:#6ab0e0;}
+  .my-status.rejected{border-color:#3a2323;}
+  .my-status.rejected .my-status-state{color:var(--danger);}
+
+  .ig-footer{margin-top:26px;padding-top:22px;border-top:1px solid #262626;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .ig-footer a{display:flex;flex-direction:column;align-items:center;gap:10px;text-decoration:none;}
+  .ig-icon{width:60px;height:60px;border-radius:16px;background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);display:flex;align-items:center;justify-content:center;}
+  .ig-icon svg{width:32px;height:32px;}
+  .ig-footer .ig-text{color:var(--gold);font-size:0.85rem;font-weight:700;letter-spacing:.12em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><h1>🎸 Rok Morgan</h1></header>
+  <div class="subtitle">Izberi komad ali predlagaj svojega<br>Choose a song or suggest your own</div>
+
+  <!-- HOME -->
+  <div class="view active" id="view-home">
+    <button class="big-btn" onclick="goList()">
+      <span class="emoji">🎵</span>
+      <span>Izberi komad / Song Request<small>Poglej seznam in pošlji zahtevek · Browse the list and send a request</small></span>
+    </button>
+    <button class="big-btn" onclick="goQueue()">
+      <span class="emoji">🎶</span>
+      <span>Vrstni red / Live Queue<small>Kdaj bo na vrsti tvoj komad · When your song is up</small></span>
+    </button>
+    <button class="big-btn" onclick="goWishlist()">
+      <span class="emoji">💌</span>
+      <span>Predlagaj komad / Suggest a Song<small>Ki ga nimam (še) v repertoarju · Not in my repertoire (yet)</small></span>
+    </button>
+    <button class="big-btn" onclick="goVizitka()">
+      <span class="emoji">🪪</span>
+      <span>Vizitka / Business Card<small>Kontaktni podatki · Contact info</small></span>
+    </button>
+
+    <div class="ig-footer">
+      <a href="https://www.instagram.com/rokmorgan/" target="_blank" rel="noopener">
+        <span class="ig-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="20" height="20" rx="6" stroke="white" stroke-width="2"/>
+            <circle cx="12" cy="12" r="4.5" stroke="white" stroke-width="2"/>
+            <circle cx="17.5" cy="6.5" r="1.2" fill="white"/>
+          </svg>
+        </span>
+        <span class="ig-text">FOLLOW ME</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- LIVE QUEUE -->
+  <div class="view" id="view-queue">
+    <button class="back" onclick="goHome()">← Nazaj / Back</button>
+    <h3 style="color:var(--gold);margin-bottom:2px;">Vrstni red nocojšnjega večera</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-top:0;">Tvoj komad je označen z zlato · Your song is highlighted in gold</p>
+    <div id="my-status-box" style="display:none;"></div>
+    <div id="queue-list"></div>
+    <div class="section-label">🎵 Ravnokar odigrano / Just played</div>
+    <div id="played-list"></div>
+  </div>
+
+  <!-- VIZITKA -->
+  <div class="view" id="view-vizitka">
+    <button class="back" onclick="goHome()">← Nazaj / Back</button>
+    <div class="contact-card">
+      <div class="name">Rok Morgan</div>
+      <div class="role">Glasbenik · Musician</div>
+      <a class="contact-row" href="tel:+38640298344">
+        <span class="ic">📞</span>
+        <span><span class="lbl">Telefon / Phone</span><br><span class="val">040 298 344</span></span>
+      </a>
+      <a class="contact-row" href="mailto:rok.morgan@gmail.com">
+        <span class="ic">✉️</span>
+        <span><span class="lbl">E-pošta / Email</span><br><span class="val">rok.morgan@gmail.com</span></span>
+      </a>
+      <a class="contact-row" href="https://www.instagram.com/rokmorgan/" target="_blank" rel="noopener">
+        <span class="ic">📸</span>
+        <span><span class="lbl">Instagram</span><br><span class="val">@rokmorgan</span></span>
+      </a>
+    </div>
+  </div>
+
+  <!-- SONG LIST -->
+  <div class="view" id="view-list">
+    <button class="back" onclick="goHome()">← Nazaj / Back</button>
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Išči po naslovu ali izvajalcu… / Search title or artist…" oninput="renderSongs()">
+    </div>
+    <div id="song-results"></div>
+  </div>
+
+  <!-- REQUEST FORM -->
+  <div class="view" id="view-request">
+    <button class="back" onclick="goList()">← Nazaj na seznam / Back to list</button>
+    <div class="selected-song">
+      <div class="cat" id="req-cat"></div>
+      <div class="t" id="req-title"></div>
+      <div class="a" id="req-artist"></div>
+    </div>
+
+    <div class="field">
+      <label>Napitnina / Tip</label>
+      <div class="amount-grid">
+        <div class="amount-btn" data-amt="0" onclick="pickAmount(0)">Brez plačila<br>No tip</div>
+        <div class="amount-btn" data-amt="2" onclick="pickAmount(2)">2 €</div>
+        <div class="amount-btn" data-amt="5" onclick="pickAmount(5)">5 €</div>
+        <div class="amount-btn" data-amt="10" onclick="pickAmount(10)">10 €</div>
+        <div class="amount-btn" data-amt="20" onclick="pickAmount(20)">20 €</div>
+        <div class="amount-btn" data-amt="custom" onclick="pickAmount('custom')">Poljubno<br>Custom</div>
+      </div>
+    </div>
+    <div class="field" id="custom-amount-wrap" style="display:none;">
+      <label>Vnesi znesek (€) / Enter amount (€)</label>
+      <input type="number" id="custom-amount" min="0" step="0.5" placeholder="npr. 7.5">
+    </div>
+
+    <div class="field">
+      <label>Tvoje ime / Your name *</label>
+      <input type="text" id="guest-name" placeholder="npr. / e.g. Ana">
+    </div>
+    <div class="field">
+      <label>Sporočilo / Message (optional)</label>
+      <textarea id="guest-message" rows="2" placeholder="npr. / e.g. za Ano za rojstni dan 🎂"></textarea>
+    </div>
+    <div class="error-msg" id="req-error"></div>
+    <button class="submit-btn" onclick="submitRequest()">Pošlji zahtevek / Send Request</button>
+  </div>
+
+  <!-- CONFIRM (request) -->
+  <div class="view" id="view-confirm">
+    <div class="confirm-box">
+      <div class="big-emoji">🎸</div>
+      <h2>Zahtevek poslan!<br>Request sent!</h2>
+      <p>Rok ga bo kmalu potrdil.<br>Rok will confirm it shortly.</p>
+      <div id="revolut-area"></div>
+      <div class="tipbox-btn" id="tipbox-btn" onclick="ackTipBox(this)">💰 Prinesem fizično v skrinjico<br>I'll drop it in the tip box</div>
+    </div>
+    <button class="submit-btn secondary" onclick="goQueue()">🎶 Poglej vrstni red / See the queue</button>
+    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek / Back to start</button>
+  </div>
+
+  <!-- WISHLIST FORM -->
+  <div class="view" id="view-wishlist">
+    <button class="back" onclick="goHome()">← Nazaj / Back</button>
+    <h3 style="color:var(--gold);margin-bottom:2px;">Glasbena želja / Song Suggestion</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-top:0;">Predlagaj komad izven mojega repertoarja — če ga poznam, ga morda odigram še danes, sicer se ga naučim za naslednjič 🙂<br><span style="font-size:0.92em;">Suggest a song outside my repertoire — if I know it, I might play it tonight; if not, I'll learn it for next time 🙂</span></p>
+    <div class="field">
+      <label>Izvajalec / Artist *</label>
+      <input type="text" id="wl-artist" placeholder="npr. / e.g. Zdravko Čolić">
+    </div>
+    <div class="field">
+      <label>Naslov pesmi / Song Title *</label>
+      <input type="text" id="wl-title" placeholder="npr. / e.g. Ti si mi u krvi">
+    </div>
+    <div class="field">
+      <label>Tvoje ime / Your name (optional)</label>
+      <input type="text" id="wl-name" placeholder="npr. / e.g. Ana">
+    </div>
+    <div class="field">
+      <label>Sporočilo / Message (optional)</label>
+      <textarea id="wl-message" rows="2" placeholder="npr. / e.g. moja poročna pesem"></textarea>
+    </div>
+    <div class="error-msg" id="wl-error"></div>
+    <button class="submit-btn" onclick="submitWishlist()">Pošlji željo / Send Suggestion</button>
+  </div>
+
+  <!-- CONFIRM (wishlist) -->
+  <div class="view" id="view-wishlist-confirm">
+    <div class="confirm-box">
+      <div class="big-emoji">💌</div>
+      <h2>Želja poslana! / Suggestion sent!</h2>
+      <p>Hvala za predlog — Rok jo bo pogledal. · Thanks — Rok will take a look.</p>
+    </div>
+    <button class="submit-btn secondary" onclick="goHome()">Nazaj na začetek / Back to start</button>
+  </div>
+
+  <div class="footer-note">made with 🎶 for live nights</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============ NASTAVITVE ============
+const SUPABASE_URL = "https://jrmsisnycnqbeahkxyly.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ifjKIvKIlMXRxB2uRN9DwA_GJI7ARZb";
+const REVOLUT_LINK = "https://revolut.me/rokxok7j";
+// =====================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CATEGORY_LABELS = {
+  "Angleške": "Angleške / English",
+  "Slovenske": "Slovenske / Slovenian",
+  "Italijanske": "Italijanske / Italian",
+  "Španske": "Španske / Spanish",
+  "Ex-Yu": "Ex-Yu"
+};
+
+let ALL_SONGS = [];
+let selectedSong = null;
+let selectedAmount = null;
+let lastSubmitAt = 0;
+let CURRENT_EVENT = null;
+let queueRequests = [];
+let playedRequests = [];
+let eventRequests = [];
+let myLastRequestId = null;
+try{ myLastRequestId = localStorage.getItem("my_last_request_id") || null; }catch(e){}
+
+async function loadCurrentEvent(){
+  const { data } = await sb.from("app_settings").select("current_event").eq("id", true).single();
+  CURRENT_EVENT = data ? data.current_event : null;
+}
+
+function norm(s){
+  return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+}
+
+async function loadSongs(){
+  const { data, error } = await sb.from("songs").select("*").eq("is_active", true).order("position", { ascending: true });
+  if (error) { console.error(error); return; }
+  ALL_SONGS = data || [];
+  renderSongs();
+}
+
+function goHome(){ show("view-home"); }
+function goList(){ show("view-list"); document.getElementById("search").value=""; renderSongs(); }
+function goWishlist(){ show("view-wishlist"); }
+function goVizitka(){ show("view-vizitka"); }
+function goQueue(){ show("view-queue"); loadEventRequests(); }
+
+async function loadEventRequests(){
+  // Samo tisto, kar je Rok zavestno izdal v VIDNO čakalno vrsto (SPREMEMBA 3/4) —
+  // ne celotna njegova zasebna banka. Razvrščeno po queue_order (brez oštevilčenih pozicij v UI).
+  const { data } = await sb.from("requests").select("*").eq("status","accepted");
+  eventRequests = (data||[]).filter(r => !CURRENT_EVENT || r.event_name === CURRENT_EVENT);
+  queueRequests = eventRequests
+    .filter(r => r.released_to_queue && !r.played_at && !r.merged_into)
+    .sort((a,b)=> (a.queue_order ?? 0) - (b.queue_order ?? 0));
+  playedRequests = eventRequests.filter(r => r.played_at).sort((a,b)=> new Date(b.played_at) - new Date(a.played_at));
+  renderQueue();
+  renderPlayed();
+  renderSongs();
+  refreshMyStatus();
+}
+
+function songBadge(songId){
+  // Zasebna banka (potrjeno, a še ne izdano) se namenoma NE prikazuje tukaj —
+  // publika vidi samo to, kar je Rok dejansko spustil v vidno vrsto.
+  if (eventRequests.some(r => r.song_id===songId && r.released_to_queue && !r.played_at)) return '<span class="song-badge badge-queued">V vrsti / In queue</span>';
+  if (eventRequests.some(r => r.song_id===songId && r.played_at)) return '<span class="song-badge badge-played">Odigrano / Played</span>';
+  return '';
+}
+
+function renderQueue(){
+  const box = document.getElementById("queue-list");
+  if (!box) return;
+  if (!CURRENT_EVENT){
+    box.innerHTML = '<div class="empty-msg">Nocoj ni aktivnega dogodka.<br>No active event tonight.</div>';
+    return;
+  }
+  if (!queueRequests.length){
+    box.innerHTML = '<div class="empty-msg">Trenutno ni ničesar v vrsti.<br>Nothing in the queue right now.</div>';
+    return;
+  }
+  box.innerHTML = queueRequests.map((r, i)=>{
+    const song = ALL_SONGS.find(s=>s.id===r.song_id) || {title:"—", artist:""};
+    const mine = r.id === myLastRequestId;
+    return `<div class="queue-item${mine ? ' mine' : ''}">
+      <div class="queue-pos">${i+1}</div>
+      <div class="queue-info">
+        <div class="queue-song">${escapeHtml(song.title)}</div>
+        <div class="queue-artist">${escapeHtml(song.artist)}</div>
+      </div>
+      ${mine ? '<div class="queue-you">TVOJ<br>YOURS</div>' : ''}
+    </div>`;
+  }).join("");
+}
+
+// Tristopenjski status LASTNE zadnje želje (SPREMEMBA 3): poslano / sprejeto v banko / v vidni vrsti / odigrano.
+// Sledi tudi kazalcu merged_into, če je bila želja avtomatsko združena z že obstoječim vnosom (SPREMEMBA 6).
+async function refreshMyStatus(){
+  const box = document.getElementById("my-status-box");
+  if (!box) return;
+  if (!myLastRequestId){ box.style.display = "none"; return; }
+
+  const { data: row } = await sb.from("requests").select("*").eq("id", myLastRequestId).single();
+  if (!row){ box.style.display = "none"; return; }
+
+  // Če je bila moja zadnja želja iz PREJŠNJEGA dogodka (Rok je medtem v nadzorni plošči
+  // začel nov dogodek), se ne šteje več — status box izgine in se pozabi, da ne kaže
+  // starih rezultatov (npr. "Odigrano!" iz prejšnjega nastopa) novemu obiskovalcu.
+  if (CURRENT_EVENT && row.event_name !== CURRENT_EVENT){
+    box.style.display = "none";
+    myLastRequestId = null;
+    try{ localStorage.removeItem("my_last_request_id"); }catch(e){}
+    return;
+  }
+
+  let effective = row;
+  if (row.merged_into){
+    const { data: primary } = await sb.from("requests").select("*").eq("id", row.merged_into).single();
+    if (primary) effective = primary;
+  }
+
+  const song = ALL_SONGS.find(s=>s.id===row.song_id) || {title:"—", artist:""};
+  let stateClass, stateText;
+  if (effective.played_at){
+    stateClass = "played"; stateText = "🎵 Odigrano! / Played!";
+  } else if (effective.released_to_queue){
+    stateClass = "queued"; stateText = "🎶 Prihaja kmalu! / Coming up soon!";
+  } else if (effective.status === "accepted"){
+    stateClass = "accepted"; stateText = "✓ Sprejeto! / Accepted!";
+  } else if (effective.status === "rejected"){
+    stateClass = "rejected"; stateText = "Žal tokrat ne. / Not this time.";
+  } else {
+    stateClass = "pending"; stateText = "⏳ Poslano, čakam potrditev… / Sent, awaiting confirmation…";
+  }
+  box.className = "my-status " + stateClass;
+  box.style.display = "block";
+  box.innerHTML = `<div class="my-status-label">Tvoja zadnja želja / Your last request</div>
+    <div class="my-status-song">${escapeHtml(song.title)}${song.artist ? " — "+escapeHtml(song.artist) : ""}</div>
+    <div class="my-status-state">${stateText}</div>`;
+}
+
+function renderPlayed(){
+  const box = document.getElementById("played-list");
+  if (!box) return;
+  const recent = playedRequests.slice(0, 5);
+  if (!recent.length){
+    box.innerHTML = '<div class="empty-msg">Še nič odigranega nocoj.<br>Nothing played yet tonight.</div>';
+    return;
+  }
+  box.innerHTML = recent.map(r=>{
+    const song = ALL_SONGS.find(s=>s.id===r.song_id) || {title:"—", artist:""};
+    return `<div class="queue-item played">
+      <div class="queue-info">
+        <div class="queue-song">${escapeHtml(song.title)}</div>
+        <div class="queue-artist">${escapeHtml(song.artist)}</div>
+      </div>
+      <div class="played-tag">🎵</div>
+    </div>`;
+  }).join("");
+}
+
+function ackTipBox(el){
+  el.innerHTML = "✓ Hvala!<br>✓ Thanks!";
+  el.classList.add("acked");
+  el.onclick = null;
+}
+
+function resetTipBox(){
+  const el = document.getElementById("tipbox-btn");
+  if (!el) return;
+  el.innerHTML = "💰 Prinesem fizično v skrinjico<br>I'll drop it in the tip box";
+  el.classList.remove("acked");
+  el.onclick = function(){ ackTipBox(el); };
+}
+
+function show(id){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+
+function renderSongs(){
+  const q = norm(document.getElementById("search").value);
+  const box = document.getElementById("song-results");
+  const filtered = ALL_SONGS.filter(s => !q || norm(s.title).includes(q) || norm(s.artist).includes(q));
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty-msg">Ni najdenih komadov — poskusi drug iskalni niz.<br>No songs found — try a different search.</div>';
+    return;
+  }
+  let html = "";
+  let lastCat = null;
+  filtered.forEach(s=>{
+    if (s.category !== lastCat){
+      html += `<div class="song-cat">${escapeHtml(CATEGORY_LABELS[s.category] || s.category)}</div>`;
+      lastCat = s.category;
+    }
+    html += `<div class="song-item" onclick="selectSong(${s.id})">
+      <div><div class="title">${escapeHtml(s.title)}</div><div class="artist">${escapeHtml(s.artist)}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">${songBadge(s.id)}<div class="arrow">›</div></div>
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+
+function selectSong(id){
+  selectedSong = ALL_SONGS.find(s=>s.id===id);
+  if (!selectedSong) return;
+  document.getElementById("req-cat").textContent = CATEGORY_LABELS[selectedSong.category] || selectedSong.category;
+  document.getElementById("req-title").textContent = selectedSong.title;
+  document.getElementById("req-artist").textContent = selectedSong.artist;
+  selectedAmount = null;
+  document.querySelectorAll(".amount-btn").forEach(b=>b.classList.remove("selected"));
+  document.getElementById("custom-amount-wrap").style.display = "none";
+  document.getElementById("guest-name").value = "";
+  document.getElementById("guest-message").value = "";
+  document.getElementById("req-error").textContent = "";
+  show("view-request");
+}
+
+function pickAmount(v){
+  selectedAmount = v;
+  document.querySelectorAll(".amount-btn").forEach(b=>{
+    b.classList.toggle("selected", String(b.dataset.amt)===String(v));
+  });
+  document.getElementById("custom-amount-wrap").style.display = (v==="custom") ? "block" : "none";
+}
+
+function getFinalAmount(){
+  if (selectedAmount===null) return null;
+  if (selectedAmount==="custom"){
+    const v = parseFloat(document.getElementById("custom-amount").value);
+    if (isNaN(v) || v<0) return null;
+    return v;
+  }
+  return Number(selectedAmount);
+}
+
+async function submitRequest(){
+  const err = document.getElementById("req-error");
+  err.textContent = "";
+  const name = document.getElementById("guest-name").value.trim();
+  const message = document.getElementById("guest-message").value.trim();
+  const amount = getFinalAmount();
+
+  if (!name){ err.textContent = "Prosim, vnesi svoje ime. / Please enter your name."; return; }
+  if (selectedAmount===null){ err.textContent = "Izberi znesek (ali \"Brez plačila\"). / Choose an amount (or \"No tip\")."; return; }
+  if (amount===null){ err.textContent = "Vnesi veljaven znesek. / Enter a valid amount."; return; }
+  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov zahtevek. / Please wait before sending another request."; return; }
+
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = "Pošiljam… / Sending…";
+
+  const { data, error } = await sb.from("requests").insert({
+    song_id: selectedSong.id,
+    guest_name: name,
+    amount: amount,
+    message: message || null,
+    event_name: CURRENT_EVENT
+  }).select().single();
+
+  btn.disabled = false; btn.textContent = "Pošlji zahtevek / Send Request";
+
+  if (error){ err.textContent = "Prišlo je do napake, poskusi znova. / Something went wrong, try again."; console.error(error); return; }
+
+  myLastRequestId = data ? data.id : null;
+  try{ if (myLastRequestId) localStorage.setItem("my_last_request_id", myLastRequestId); }catch(e){}
+  lastSubmitAt = Date.now();
+  const revArea = document.getElementById("revolut-area");
+  if (amount > 0){
+    revArea.innerHTML = `
+      <a class="revolut-btn" target="_blank" rel="noopener" href="${REVOLUT_LINK}">💳 Nakaži ${amount.toFixed(2)} € / Pay €${amount.toFixed(2)} via Revolut</a>
+      <div class="hint">Odpre se Revolut — vnesi znesek ${amount.toFixed(2)} €, če ni že izpolnjen.<br>Opens Revolut — enter €${amount.toFixed(2)} if not already filled in.</div>`;
+  } else {
+    revArea.innerHTML = "";
+  }
+  resetTipBox();
+  document.getElementById("tipbox-btn").style.display = (amount > 0) ? "block" : "none";
+  show("view-confirm");
+}
+
+async function submitWishlist(){
+  const err = document.getElementById("wl-error");
+  err.textContent = "";
+  const artist = document.getElementById("wl-artist").value.trim();
+  const title = document.getElementById("wl-title").value.trim();
+  const name = document.getElementById("wl-name").value.trim();
+  const message = document.getElementById("wl-message").value.trim();
+
+  if (!artist || !title){ err.textContent = "Vnesi vsaj izvajalca in naslov pesmi. / Enter at least artist and song title."; return; }
+  if (Date.now() - lastSubmitAt < 15000){ err.textContent = "Počakaj trenutek preden pošlješ nov predlog. / Please wait before sending another suggestion."; return; }
+
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = "Pošiljam… / Sending…";
+
+  const { error } = await sb.from("wishlist_requests").insert({
+    artist, title, guest_name: name || null, message: message || null, event_name: CURRENT_EVENT
+  });
+
+  btn.disabled = false; btn.textContent = "Pošlji željo / Send Suggestion";
+
+  if (error){ err.textContent = "Prišlo je do napake, poskusi znova. / Something went wrong, try again."; console.error(error); return; }
+
+  lastSubmitAt = Date.now();
+  document.getElementById("wl-artist").value = "";
+  document.getElementById("wl-title").value = "";
+  document.getElementById("wl-name").value = "";
+  document.getElementById("wl-message").value = "";
+  show("view-wishlist-confirm");
+}
+
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+(async function init(){
+  await loadCurrentEvent();
+  await loadSongs();
+  await loadEventRequests();
+
+  sb.channel('guest-queue-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+      loadEventRequests();
+    })
+    .subscribe();
+})();
+</script>
+</body>
+</html>
