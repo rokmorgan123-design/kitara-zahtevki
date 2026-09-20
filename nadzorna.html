@@ -555,12 +555,14 @@ function renderRequests(justArrived){
     }).join("");
   }
 
-  // Komadi, ki so nastali iz potrjene glasbene želje (wishlist_id nastavljen), gredo v
-  // SVOJ razdelek "Glasbene želje — banka", ne v navadno banko — da se ne izgubijo med
-  // komadi, ki jih je Rok izbral sam.
-  const bankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into && !r.wishlist_id);
+  // "Moja banka" je rezervirana SAMO za komade, ki jih Rok doda sam (addToBank —
+  // guest_name je takrat vedno točno "Rok (sam izbral)"). VSAK zahtevek, ki pride od
+  // gosta — bodisi izbran s seznama (navaden zahtevek) bodisi na novo predlagan
+  // (glasbena želja) — gre v "Glasbene želje — banka", da se ne izgubi med komadi,
+  // ki jih je Rok izbral sam.
+  const bankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into && r.guest_name==="Rok (sam izbral)");
   const bank = ensureQueueOrder(bankRaw);
-  const wishBankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into && r.wishlist_id);
+  const wishBankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into && r.guest_name!=="Rok (sam izbral)");
   const wishBank = ensureQueueOrder(wishBankRaw);
   const queueRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && r.released_to_queue && !r.merged_into);
   const queue = ensureQueueOrder(queueRaw);
@@ -576,7 +578,7 @@ function renderRequests(justArrived){
   currentQueue = queue;
   const bankBox = document.getElementById("req-bank");
   if (!bank.length){
-    bankBox.innerHTML = '<div class="empty-msg">Banka je prazna. Dodajaj komade iz zavihka Setlista ali potrjuj želje publike.</div>';
+    bankBox.innerHTML = '<div class="empty-msg">Banka je prazna. Dodajaj komade iz zavihka Setlista.</div>';
   } else {
     bankBox.innerHTML = bank.map((r,i)=>{
       const song = resolveSongInfo(r);
@@ -602,7 +604,7 @@ function renderRequests(justArrived){
 
   const wishBankBox = document.getElementById("req-wishbank");
   if (!wishBank.length){
-    wishBankBox.innerHTML = '<div class="empty-msg">Trenutno ni potrjenih glasbenih želja.</div>';
+    wishBankBox.innerHTML = '<div class="empty-msg">Trenutno ni ničesar — ko sprejmeš zahtevek ali glasbeno željo publike, se prikaže tukaj.</div>';
   } else {
     wishBankBox.innerHTML = wishBank.map((r,i)=>{
       const song = resolveSongInfo(r);
