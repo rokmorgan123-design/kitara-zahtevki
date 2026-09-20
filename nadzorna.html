@@ -193,6 +193,9 @@
     <div class="section-label">🔒 Moja banka (vidiš samo ti)</div>
     <div id="req-bank"></div>
 
+    <div class="section-label">💡 Glasbene želje — banka (vidiš samo ti)</div>
+    <div id="req-wishbank"></div>
+
     <div class="section-label">🎵 Odigrano nocoj <span id="played-count"></span></div>
     <div id="req-played"></div>
 
@@ -377,6 +380,15 @@ function escapeHtml(s){
   return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
+// Ugotovi naslov/izvajalca za en "requests" vnos. Za navadne komade iz repertoarja
+// (song_id nastavljen) gre po ustaljeni poti preko songsMap. Za komade, ki so nastali
+// iz potrjene GLASBENE ŽELJE (song_id je NULL, ker komad morda sploh ni v pesmarici),
+// se naslov/izvajalec vzameta iz wish_title/wish_artist, ki sta bila shranjena ob potrditvi.
+function resolveSongInfo(r){
+  if (r.song_id != null) return songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+  return {title: r.wish_title || "(neznan komad)", artist: r.wish_artist || ""};
+}
+
 // Doda ali posodobi zahtevek v lokalnem seznamu — prepreči podvajanje,
 // ker Supabase Realtime svojemu lastnemu insertu vrne tudi INSERT dogodek.
 function upsertRequest(row){
@@ -523,7 +535,7 @@ function renderRequests(justArrived){
     pendBox.innerHTML = '<div class="empty-msg">Trenutno ni novih zahtevkov.</div>';
   } else {
     pendBox.innerHTML = pending.map(r=>{
-      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const song = resolveSongInfo(r);
       const amt = Number(r.amount)>0 ? `<div class="amount">${Number(r.amount).toFixed(2)} €</div>` : `<div class="amount free">brez plačila</div>`;
       const lyrBtn = pesmaricaBtn(song.title, song.artist);
       return `<div class="card new">
@@ -543,8 +555,13 @@ function renderRequests(justArrived){
     }).join("");
   }
 
-  const bankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into);
+  // Komadi, ki so nastali iz potrjene glasbene želje (wishlist_id nastavljen), gredo v
+  // SVOJ razdelek "Glasbene želje — banka", ne v navadno banko — da se ne izgubijo med
+  // komadi, ki jih je Rok izbral sam.
+  const bankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into && !r.wishlist_id);
   const bank = ensureQueueOrder(bankRaw);
+  const wishBankRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && !r.released_to_queue && !r.merged_into && r.wishlist_id);
+  const wishBank = ensureQueueOrder(wishBankRaw);
   const queueRaw = eventScoped.filter(r=>r.status==="accepted" && !r.played_at && r.released_to_queue && !r.merged_into);
   const queue = ensureQueueOrder(queueRaw);
   // Odigrano/zavrnjeno je čista zgodovina (nič ni na njih treba klikati), zato je varno
@@ -562,7 +579,7 @@ function renderRequests(justArrived){
     bankBox.innerHTML = '<div class="empty-msg">Banka je prazna. Dodajaj komade iz zavihka Setlista ali potrjuj želje publike.</div>';
   } else {
     bankBox.innerHTML = bank.map((r,i)=>{
-      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const song = resolveSongInfo(r);
       const tip = Number(r.amount)>0 ? ` · ${Number(r.amount).toFixed(2)} €` : ``;
       const lyrBtn = pesmaricaBtn(song.title, song.artist);
       return `<div class="queue-item" data-id="${r.id}">
@@ -583,12 +600,38 @@ function renderRequests(justArrived){
   }
   initSortableFor("req-bank", reorderList);
 
+  const wishBankBox = document.getElementById("req-wishbank");
+  if (!wishBank.length){
+    wishBankBox.innerHTML = '<div class="empty-msg">Trenutno ni potrjenih glasbenih želja.</div>';
+  } else {
+    wishBankBox.innerHTML = wishBank.map((r,i)=>{
+      const song = resolveSongInfo(r);
+      const tip = Number(r.amount)>0 ? ` · ${Number(r.amount).toFixed(2)} €` : ``;
+      const lyrBtn = pesmaricaBtn(song.title, song.artist);
+      return `<div class="queue-item" data-id="${r.id}">
+        <div class="drag-handle" aria-label="Primi in premakni">⠿</div>
+        <div class="queue-pos">${i+1}</div>
+        <div class="queue-info">
+          <div class="queue-song">${escapeHtml(song.title)}</div>
+          <div class="queue-artist">${escapeHtml(song.artist)}</div>
+          <div class="queue-guest">👤 ${escapeHtml(r.guest_name)}${tip}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;">
+          ${lyrBtn}
+          <button class="btn-release" onclick="releaseToQueue('${r.id}')">→ V vrsto</button>
+          <button class="btn-remove" onclick="removeFromBank('${r.id}')">🗑 Odstrani</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  initSortableFor("req-wishbank", reorderList);
+
   const queueBox = document.getElementById("req-queue");
   if (!queue.length){
     queueBox.innerHTML = '<div class="empty-msg">Vidna čakalna vrsta je prazna.</div>';
   } else {
     queueBox.innerHTML = queue.map((r,i)=>{
-      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const song = resolveSongInfo(r);
       const tip = Number(r.amount)>0 ? ` · ${Number(r.amount).toFixed(2)} €` : ``;
       const lyrBtn = pesmaricaBtn(song.title, song.artist);
       return `<div class="queue-item" data-id="${r.id}">
@@ -615,7 +658,7 @@ function renderRequests(justArrived){
     playedBox.innerHTML = '<div class="empty-msg">Še nič odigranega nocoj.</div>';
   } else {
     playedBox.innerHTML = played.map(r=>{
-      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const song = resolveSongInfo(r);
       return `<div class="queue-item played">
         <div class="queue-info">
           <div class="queue-song">${escapeHtml(song.title)}</div>
@@ -632,7 +675,7 @@ function renderRequests(justArrived){
     rejBox.innerHTML = '<div class="empty-msg">Ni zavrnjenih zahtevkov.</div>';
   } else {
     rejBox.innerHTML = rejected.map(r=>{
-      const song = songsMap[r.song_id] || {title:"(neznan komad)", artist:""};
+      const song = resolveSongInfo(r);
       return `<div class="rej-item">
         <div class="song">${escapeHtml(song.title)}</div>
         <div class="artist">${escapeHtml(song.artist)} · 👤 ${escapeHtml(r.guest_name)}</div>
@@ -887,7 +930,7 @@ function renderWishlist(justArrived){
         ${r.message ? `<div class="msg">"${escapeHtml(r.message)}"</div>` : ``}
         <div class="time">${fmtTime(r.created_at)}</div>
         <div class="actions">
-          <button class="btn-accept" onclick="setWishlistStatus('${r.id}','playing_today')">🎤 Igram danes</button>
+          <button class="btn-accept" onclick="confirmWishlistPlaying('${r.id}')">🎤 Igram danes</button>
           <button class="btn-alt" onclick="setWishlistStatus('${r.id}','next_time')">📝 Naslednjič</button>
           <button class="btn-reject" onclick="setWishlistStatus('${r.id}','declined')">✕</button>
         </div>
@@ -917,6 +960,58 @@ async function setWishlistStatus(id, status){
   wishlist = wishlist.map(r => r.id===id ? {...r, status} : r);
   renderWishlist(false);
   await sb.from("wishlist_requests").update({ status }).eq("id", id);
+}
+
+// Potrdi glasbeno željo ("🎤 Igram danes"): označi jo kot potrjeno v zgodovini Želja
+// IN ustvari nov vnos v "Glasbene želje — banko" (SVOJ razdelek, ločen od navadne banke),
+// da jo Rok lahko od tam enako kot vsak drug komad pošlje v vidno čakalno vrsto in kasneje
+// označi kot odigrano — brez da bi se pomešala med komade, ki jih je izbral sam.
+async function confirmWishlistPlaying(id){
+  const w = wishlist.find(r=>r.id===id);
+  if (!w) return;
+
+  // Varovalo pred podvajanjem (npr. dvojni klik, zamujen realtime echo): če za to
+  // željo že obstaja povezan vnos v banki/vrsti/odigranem, samo posodobi status želje.
+  const already = requests.find(r=>r.wishlist_id===id && !r.merged_into);
+  if (already){
+    wishlist = wishlist.map(r => r.id===id ? {...r, status:"playing_today"} : r);
+    renderWishlist(false);
+    await sb.from("wishlist_requests").update({ status:"playing_today" }).eq("id", id);
+    return;
+  }
+
+  wishlist = wishlist.map(r => r.id===id ? {...r, status:"playing_today"} : r);
+  renderWishlist(false);
+
+  const payload = {
+    song_id: null,
+    wish_title: w.title,
+    wish_artist: w.artist,
+    wishlist_id: w.id,
+    guest_name: w.guest_name || "Gost",
+    amount: 0,
+    message: w.message || null,
+    status: "accepted",
+    played_at: null,
+    released_to_queue: false,
+    event_name: CURRENT_EVENT,
+    queue_order: nextBankOrder()
+  };
+
+  const [wishRes, reqRes] = await Promise.all([
+    sb.from("wishlist_requests").update({ status:"playing_today" }).eq("id", id),
+    sb.from("requests").insert(payload).select().single()
+  ]);
+  if (wishRes && wishRes.error){ console.error(wishRes.error); }
+  if (reqRes && reqRes.error){
+    console.error(reqRes.error);
+    alert("Želja je bila potrjena, a je nisem uspel dodati v banko: " + (reqRes.error.message || JSON.stringify(reqRes.error)));
+    return;
+  }
+  if (reqRes && reqRes.data){
+    upsertRequest(reqRes.data);
+    renderRequests(false);
+  }
 }
 
 // ---------- Predloge (shranjene setliste / presets, razdeljene na sete) ----------
@@ -1212,13 +1307,13 @@ async function loadStats(force){
   const box = document.getElementById("stats-content");
   box.innerHTML = '<div class="empty-msg">Nalagam statistiko…</div>';
 
-  const [playedReqRes, playedWishRes] = await Promise.all([
-    sb.from("requests").select("*").eq("status","accepted").not("played_at","is",null).order("played_at",{ ascending:false }).limit(5000),
-    sb.from("wishlist_requests").select("*").eq("status","playing_today").order("created_at",{ ascending:false }).limit(5000)
-  ]);
-
-  const playedReq = (playedReqRes.data || []).filter(r => !isTestEvent(r.event_name));
-  const playedWish = (playedWishRes.data || []).filter(r => !isTestEvent(r.event_name));
+  // Odigrane glasbene želje se štejejo enako kot navadni komadi — preko istega
+  // "requests" vnosa (wishlist_id povezuje nazaj na izvirno željo), da se štejejo
+  // šele takrat, ko so DEJANSKO odigrane (played_at), ne že ob sami potrditvi.
+  const { data } = await sb.from("requests").select("*").eq("status","accepted").not("played_at","is",null).order("played_at",{ ascending:false }).limit(5000);
+  const played = (data || []).filter(r => !isTestEvent(r.event_name));
+  const playedReq = played.filter(r => !r.wishlist_id);
+  const playedWish = played.filter(r => r.wishlist_id);
   renderStats(playedReq, playedWish);
   STATS_LOADED = true;
 }
@@ -1246,7 +1341,7 @@ function renderStats(playedReq, playedWish){
   playedWish.forEach(r=>{
     const b = bucket(r.event_name);
     b.wish.push(r);
-    const t = new Date(r.created_at).getTime();
+    const t = new Date(r.played_at).getTime();
     if (t > b.latest) b.latest = t;
   });
   const eventNames = Object.keys(events).sort((a,b)=> events[b].latest - events[a].latest);
@@ -1303,9 +1398,10 @@ function renderStats(playedReq, playedWish){
 
     if (b.wish.length){
       html += `<div class="stats-sub-label">⭐ Glasbene želje (odigrane)</div>`;
-      b.wish.sort((x,y)=> new Date(x.created_at)-new Date(y.created_at)).forEach(r=>{
+      b.wish.sort((x,y)=> new Date(x.played_at)-new Date(y.played_at)).forEach(r=>{
         html += `<div class="stats-song-row">
-          <div><div class="stats-song-title">${escapeHtml(r.title)}</div><div class="stats-song-artist">${escapeHtml(r.artist)}${r.guest_name ? ` · 👤 ${escapeHtml(r.guest_name)}` : ``}</div></div>
+          <div><div class="stats-song-title">${escapeHtml(r.wish_title)}</div><div class="stats-song-artist">${escapeHtml(r.wish_artist)}${r.guest_name ? ` · 👤 ${escapeHtml(r.guest_name)}` : ``}</div></div>
+          <div class="stats-count">${fmtTime(r.played_at)}</div>
         </div>`;
       });
     }

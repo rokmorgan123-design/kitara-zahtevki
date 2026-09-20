@@ -328,6 +328,15 @@ function norm(s){
   return (s||"").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
 }
 
+// Naslov/izvajalec za en zahtevek. Za navadne komade iz repertoarja gre po ustaljeni
+// poti (song_id → ALL_SONGS). Komadi, ki so nastali iz POTRJENE GLASBENE ŽELJE, nimajo
+// song_id (komad morda sploh ni v repertoarju) — takrat se uporabi wish_title/wish_artist,
+// ki ju je Rok shranil ob potrditvi, da se v vrsti ne prikažeta kot prazen "—".
+function resolveSongInfo(r){
+  if (r.song_id != null) return ALL_SONGS.find(s=>s.id===r.song_id) || {title:"—", artist:""};
+  return {title: r.wish_title || "—", artist: r.wish_artist || ""};
+}
+
 async function loadSongs(){
   const { data, error } = await sb.from("songs").select("*").eq("is_active", true).order("position", { ascending: true });
   if (error) { console.error(error); return; }
@@ -390,7 +399,7 @@ function renderQueue(){
     return;
   }
   box.innerHTML = queueRequests.map((r, i)=>{
-    const song = ALL_SONGS.find(s=>s.id===r.song_id) || {title:"—", artist:""};
+    const song = resolveSongInfo(r);
     const mine = r.id === myEffectiveRequestId;
     return `<div class="queue-item${mine ? ' mine' : ''}">
       <div class="queue-pos">${i+1}</div>
@@ -429,7 +438,7 @@ async function refreshMyStatus(){
     if (primary) effective = primary;
   }
 
-  const song = ALL_SONGS.find(s=>s.id===row.song_id) || {title:"—", artist:""};
+  const song = resolveSongInfo(row);
   let stateClass, stateText;
   if (effective.played_at){
     stateClass = "played"; stateText = "🎵 Odigrano! / Played!";
@@ -458,7 +467,7 @@ function renderPlayed(){
     return;
   }
   box.innerHTML = recent.map(r=>{
-    const song = ALL_SONGS.find(s=>s.id===r.song_id) || {title:"—", artist:""};
+    const song = resolveSongInfo(r);
     return `<div class="queue-item played">
       <div class="queue-info">
         <div class="queue-song">${escapeHtml(song.title)}</div>
